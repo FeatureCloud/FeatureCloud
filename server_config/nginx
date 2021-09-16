@@ -1,0 +1,25 @@
+server {
+    listen 9000;
+    listen [::]:9000;
+    client_max_body_size 0;
+
+    location / {
+        include proxy_params;
+        proxy_pass http://127.0.0.1:5000/api/;
+    }
+}
+
+server {
+    listen 9001;
+    listen [::]:9001;
+    client_max_body_size 0;
+
+    location /static {
+        alias /app/fc_app/static/;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://127.0.0.1:5000/web/;
+    }
+}
