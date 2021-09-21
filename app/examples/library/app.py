@@ -1,8 +1,9 @@
-from app.library.states import CopyState, ConfigState, BlankState
-from engine.app import App, app_state, AppState
+from engine.app import App, app_state
+from engine.library import BlankState, CopyState, ConfigState
 
 # This is the app instance, which holds various values and is used by the app states below
 # You shouldn't access this app instance directly, just ignore it for now
+
 app = App()
 
 
