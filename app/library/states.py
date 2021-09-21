@@ -16,11 +16,7 @@ class BlankState(AppState):
             self.register_transition(self.next_state)
 
     def run(self):
-        self.post_run()
         return self.next_state
-
-    def post_run(self):
-        pass
 
 
 class CopyState(BlankState):
