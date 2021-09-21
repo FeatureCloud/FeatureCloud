@@ -37,7 +37,7 @@ class InitialState(AppState):
         self.register_transition('throw_die', BOTH)  # We declare that 'throw_die' is accessible from the 'initial' state, for both the coordinator and the participants (BOTH)
 
     def run(self) -> str or None:
-        self.update_progress(progress=0.1)  # We update the progress, so that the FeatureCloud system can display it on the frontend
+        self.update(progress=0.1)  # We update the progress, so that the FeatureCloud system can display it on the frontend
         sleep(5)
         return 'throw_die'  # By returning a string, we specify which state we want to go into next (here 'throw_die'). It has to match another state string (see below).
 
@@ -53,10 +53,9 @@ class DieState(AppState):
         self.register_transition('obtain', PARTICIPANT)
 
     def run(self) -> str or None:
-        self.update_progress(progress=0.25)
+        self.update(progress=0.25)
         d = random.randint(1, 6)
         self.app.log(f'threw a {d}')  # This is how we can log a message for debugging purposes
-
         self.send_data_to_coordinator(f'{d}', use_smpc=USE_SMPC)  # Here, we send data to the coordinator. `use_smpc` specifies whether we want to use SMPC
 
         if self.app.coordinator:
@@ -75,7 +74,7 @@ class AggregateState(AppState):
         self.register_transition('obtain', COORDINATOR)
 
     def run(self) -> str or None:
-        self.update_progress(progress=0.6)
+        self.update(progress=0.6)
         if USE_SMPC:
             s = int(self.await_data())  # Here, we wait for the sum of all values that have been sent using `send_data_to_coordinator`
         else:
@@ -92,8 +91,8 @@ class ObtainState(AppState):
     """
 
     def run(self) -> str or None:
-        self.update_progress(progress=0.9)
+        self.update(progress=0.9)
         s = int(self.await_data())
         self.app.log(f'sum is {s}')
-        self.update_progress(message=f'obtained sum {s}')
+        self.update(message=f'obtained sum {s}')
         return None  # This means we are done. If the coordinator transitions into the `None` state, the whole computation will be shut down

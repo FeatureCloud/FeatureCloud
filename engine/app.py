@@ -15,6 +15,10 @@ STATE_ERROR = 'error'
 STATE_ACTION = 'action_required'
 
 
+def data_to_bytes(d):
+    return
+
+
 class App:
 
     def __init__(self):
@@ -42,12 +46,15 @@ class App:
         self.transitions: Dict[str, Tuple[AppState, AppState, bool, bool]] = {}  # name => (source, target, participant, coordinator)
         self.transition_log: List[Tuple[datetime.datetime, str]] = []
 
+        self.internal = {}
+
     def handle_setup(self, client_id, coordinator, clients):
         # This method is called once upon startup and contains information about the execution context of this instance
         self.id = client_id
         self.coordinator = coordinator
         self.clients = clients
 
+        self.log(f'id: {self.id}')
         self.log(f'coordinator: {self.coordinator}')
         self.log(f'clients: {self.clients}')
 
@@ -78,9 +85,9 @@ class App:
             state = self.states[s]
             state.register()
 
-    def handle_incoming(self, data):
+    def handle_incoming(self, data, client):
         # This method is called when new data arrives
-        self.data_incoming.append(data.read())
+        self.data_incoming.append((data.read(), client))
 
     def handle_outgoing(self):
         # This method is called when data is requested
@@ -98,11 +105,11 @@ class App:
             self.status_smpc = self.default_smpc if self.data_outgoing[0][2] else None
         return data[0]
 
-    def _register_state(self, name, state, participant, coordinator):
+    def _register_state(self, name, state, participant, coordinator, **kwargs):
         if self.transitions.get(name):
             raise RuntimeError(f'state {name} already exists')
 
-        si = state()
+        si = state(**kwargs)
         si.app = self
         si.name = name
         si.participant = participant
@@ -181,37 +188,41 @@ class AppState:
                 data = self.app.data_incoming[:n]
                 self.app.data_incoming = self.app.data_incoming[n:]
                 if n == 1:
-                    return data[0]
+                    return data[0][0]
                 else:
-                    return data
+                    return data[0]
             sleep(1)
 
     def send_data_to_participant(self, data, destination):
-        self.app.data_outgoing.append((data, False, destination))
-        self.app.status_destination = destination
-        self.app.status_smpc = None
+        if destination == self.app.id:
+            self.app.data_incoming.append((data, self.app.id))
+        else:
+            self.app.data_outgoing.append((data, False, destination))
+            self.app.status_destination = destination
+            self.app.status_smpc = None
+            self.app.status_available = True
 
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False):
         if self.app.coordinator and not use_smpc:
             if send_to_self:
-                self.app.data_incoming.append(data)
+                self.app.data_incoming.append((data, self.app.id))
         else:
             self.app.data_outgoing.append((data, use_smpc, None))
-            self.app.status_available = True
             self.app.status_destination = None
             self.app.status_smpc = self.app.default_smpc if use_smpc else None
+            self.app.status_available = True
 
     def broadcast_data(self, data, send_to_self=True):
         if not self.app.coordinator:
             raise RuntimeError('only the coordinator can broadcast data')
         self.app.data_outgoing.append((data, False, None))
-        self.app.status_available = True
         self.app.status_destination = None
         self.app.status_smpc = None
+        self.app.status_available = True
         if send_to_self:
-            self.app.data_incoming.append(data)
+            self.app.data_incoming.append((data, self.app.id))
 
-    def update_progress(self, message=None, progress=None, state=None):
+    def update(self, message=None, progress=None, state=None):
         if message and len(message) > 40:
             raise RuntimeError('message is too long')
         if progress is not None and (progress < 0 or progress > 1):
@@ -223,13 +234,13 @@ class AppState:
         self.app.status_state = state
 
 
-def app_state(app: App, name: str, role=BOTH):
+def app_state(app: App, name: str, role=BOTH, **kwargs):
     participant, coordinator = role
     if not participant and not coordinator:
         raise RuntimeError('either participant or coordinator must be True')
 
     def func(state_class):
-        app._register_state(name, state_class, participant, coordinator)
+        app._register_state(name, state_class, participant, coordinator, **kwargs)
         return state_class
 
     return func

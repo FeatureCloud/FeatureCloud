@@ -45,5 +45,5 @@ def ctrl_data_out():
 @api_server.route('/data', method='POST')
 def ctrl_data_in():
     print(f'[CTRL] POST /data')
-    app.handle_incoming(request.body)
+    app.handle_incoming(request.body, request.query['client'])
     return ''
