@@ -10,6 +10,11 @@ COORDINATOR = (False, True)
 BOTH = (True, True)
 
 
+STATE_RUNNING = 'running'
+STATE_ERROR = 'error'
+STATE_ACTION = 'action_required'
+
+
 class App:
 
     def __init__(self):
@@ -21,8 +26,16 @@ class App:
 
         self.status_available = False
         self.status_finished = False
+        self.status_message = None
+        self.status_progress = None
+        self.status_state = None
+        self.status_destination = None
+        self.status_smpc = None
+
         self.data_incoming = []
         self.data_outgoing = []
+
+        self.default_smpc = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'range': 0}
 
         self.current_state: AppState or None = None
         self.states: Dict[str, AppState] = {}
@@ -51,6 +64,7 @@ class App:
             self.log(f'state: {self.current_state.name}')
             transition = self.current_state.run()
             if not transition:
+                self.status_progress = 1.0
                 self.log(f'done')
                 sleep(10)
                 self.status_finished = True
@@ -76,6 +90,12 @@ class App:
         self.data_outgoing = self.data_outgoing[1:]
         if len(self.data_outgoing) == 0:
             self.status_available = False
+            self.status_destination = None
+            self.status_smpc = None
+        else:
+            self.status_available = True
+            self.status_destination = self.data_outgoing[0][1]
+            self.status_smpc = self.default_smpc if self.data_outgoing[0][2] else None
         return data[0]
 
     def _register_state(self, name, state, participant, coordinator):
@@ -93,6 +113,9 @@ class App:
         if not participant and not coordinator:
             raise RuntimeError('either participant or coordinator must be True')
 
+        if self.transitions.get(name):
+            raise RuntimeError(f'transition {name} already exists')
+
         source_state = self.states.get(source)
         if not source_state:
             raise RuntimeError(f'source state {source} not found')
@@ -108,9 +131,6 @@ class App:
             raise RuntimeError(f'target state {target} not accessible for participants')
         if coordinator and not target_state.coordinator:
             raise RuntimeError(f'target state {target} not accessible for the coordinator')
-
-        if self.transitions.get(name):
-            raise RuntimeError(f'transition {name} already exists')
 
         self.transitions[name] = (source_state, target_state, participant, coordinator)
 
@@ -166,21 +186,41 @@ class AppState:
                     return data
             sleep(1)
 
-    def send_to_coordinator(self, data, send_to_self=True):
-        if self.app.coordinator:
+    def send_data_to_participant(self, data, destination):
+        self.app.data_outgoing.append((data, False, destination))
+        self.app.status_destination = destination
+        self.app.status_smpc = None
+
+    def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False):
+        if self.app.coordinator and not use_smpc:
             if send_to_self:
                 self.app.data_incoming.append(data)
         else:
-            self.app.data_outgoing.append(data)
+            self.app.data_outgoing.append((data, use_smpc, None))
             self.app.status_available = True
+            self.app.status_destination = None
+            self.app.status_smpc = self.app.default_smpc if use_smpc else None
 
-    def broadcast(self, data, send_to_self=True):
+    def broadcast_data(self, data, send_to_self=True):
         if not self.app.coordinator:
             raise RuntimeError('only the coordinator can broadcast data')
-        self.app.data_outgoing.append(data)
+        self.app.data_outgoing.append((data, False, None))
         self.app.status_available = True
+        self.app.status_destination = None
+        self.app.status_smpc = None
         if send_to_self:
             self.app.data_incoming.append(data)
+
+    def update_progress(self, message=None, progress=None, state=None):
+        if message and len(message) > 40:
+            raise RuntimeError('message is too long')
+        if progress is not None and (progress < 0 or progress > 1):
+            raise RuntimeError('progress must be between 0 and 1')
+        if state is not None and state != STATE_RUNNING and state != STATE_ERROR and state != STATE_ACTION:
+            raise RuntimeError('invalid state')
+        self.app.status_message = message
+        self.app.status_progress = progress
+        self.app.status_state = state
 
 
 def app_state(app: App, name: str, role=BOTH):

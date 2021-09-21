@@ -28,6 +28,11 @@ def ctrl_status():
     return json.dumps({
         'available': app.status_available,
         'finished': app.status_finished,
+        'message': app.status_message if app.status_message else (app.current_state.name if app.current_state else None),
+        'progress': app.status_progress,
+        'state': app.status_state,
+        'destination': app.status_destination,
+        'smpc': app.status_smpc,
     })
 
 
