@@ -1,5 +1,6 @@
 import datetime
 import threading
+import traceback
 from time import sleep
 
 from typing import Dict, List, Tuple
@@ -63,8 +64,17 @@ class App:
         if not self.current_state:
             raise RuntimeError('initial state not found')
 
-        self.thread = threading.Thread(target=self.run)
+        self.thread = threading.Thread(target=self.guarded_run)
         self.thread.start()
+
+    def guarded_run(self):
+        try:
+            self.run()
+        except Exception as e:  # catch all  # noqa
+            self.log(traceback.format_exc())
+            self.status_message = 'ERROR. See log for stack trace.'
+            self.status_state = STATE_ERROR
+            self.status_finished = True
 
     def run(self):
         while True:
