@@ -1,6 +1,6 @@
 from bottle import Bottle
 
-from app.examples.dice.app import app
+from app import app
 
 web_server = Bottle()
 
