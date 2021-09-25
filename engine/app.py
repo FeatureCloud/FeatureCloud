@@ -101,8 +101,8 @@ class App:
             self.status_smpc = None
         else:
             self.status_available = True
-            self.status_destination = self.data_outgoing[0][1]
-            self.status_smpc = self.default_smpc if self.data_outgoing[0][2] else None
+            self.status_smpc = self.default_smpc if self.data_outgoing[0][1] else None
+            self.status_destination = self.data_outgoing[0][2]
         return data[0]
 
     def _register_state(self, name, state, participant, coordinator, **kwargs):
