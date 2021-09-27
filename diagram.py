@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import pydot
 
 from app import app
