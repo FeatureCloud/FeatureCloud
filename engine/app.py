@@ -17,6 +17,10 @@ STATE_ERROR = 'error'
 STATE_ACTION = 'action_required'
 
 
+OPERATION_ADD = 'add'
+OPERATION_MULTIPLY = 'multiply'
+
+
 def data_to_bytes(d):
     return
 
