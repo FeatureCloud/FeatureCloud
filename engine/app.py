@@ -213,6 +213,13 @@ class AppState:
             self.app.status_smpc = None
             self.app.status_available = True
 
+    def configure_smpc(self, range=0.0, shards=0, operation='add', serialization='json'):
+        self.app.default_smpc['range'] = range
+        self.app.default_smpc['shards'] = shards
+        self.app.default_smpc['operation'] = operation
+        self.app.default_smpc['serialization'] = serialization
+
+
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False):
         if self.app.coordinator and not use_smpc:
             if send_to_self:

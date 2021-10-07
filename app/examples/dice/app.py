@@ -8,6 +8,7 @@ This demo implementation works as follows:
 """
 
 #  Imports
+import json
 import random
 from time import sleep
 
@@ -56,7 +57,8 @@ class DieState(AppState):
         self.update(progress=0.25)
         d = random.randint(1, 6)
         self.app.log(f'threw a {d}')  # This is how we can log a message for debugging purposes
-        self.send_data_to_coordinator(f'{d}', use_smpc=USE_SMPC)  # Here, we send data to the coordinator. `use_smpc` specifies whether we want to use SMPC
+        self.configure_smpc(range=6, operation='add')  # SMPC needs a range in which the expected values lie (here 6) and an operation (either 'add' or 'multiply')
+        self.send_data_to_coordinator(json.dumps(d), use_smpc=USE_SMPC)  # Here, we send data to the coordinator. `use_smpc` specifies whether we want to use SMPC
 
         if self.app.coordinator:
             return 'aggregate'
@@ -76,10 +78,10 @@ class AggregateState(AppState):
     def run(self) -> str or None:
         self.update(progress=0.6)
         if USE_SMPC:
-            s = int(self.await_data())  # Here, we wait for the sum of all values that have been sent using `send_data_to_coordinator`
+            s = json.loads(self.await_data())  # Here, we wait for the sum of all values that have been sent using `send_data_to_coordinator`
         else:
             dies = self.gather_data()  # Here, we wait for all values that have been sent using `send_data_to_coordinator`. We will receive a list containing all these values
-            s = sum([int(d) for d in dies])
+            s = sum([json.loads(d) for d in dies])
         self.broadcast_data(f'{s}')  # `broadcast_data` sends the data to all other participants, including the coordinator instance (unless `send_to_self` is set `False`)
         return 'obtain'
 
@@ -92,7 +94,7 @@ class ObtainState(AppState):
 
     def run(self) -> str or None:
         self.update(progress=0.9)
-        s = int(self.await_data())
+        s = json.loads(self.await_data())
         self.app.log(f'sum is {s}')
         self.update(message=f'obtained sum {s}')
         return None  # This means we are done. If the coordinator transitions into the `None` state, the whole computation will be shut down
