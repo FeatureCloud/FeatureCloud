@@ -8,7 +8,7 @@ from app import app
 if __name__ == '__main__':
     app.register()
 
-    graph = pydot.Dot("FeatureCloud State Diagram", graph_type="digraph", bgcolor="white")
+    graph = pydot.Dot("FeatureCloud State Diagram", graph_type="digraph", bgcolor="transparent")
 
     for s in app.states:
         state = app.states[s]
