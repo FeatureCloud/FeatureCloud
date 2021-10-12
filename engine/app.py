@@ -180,14 +180,14 @@ class AppState:
         self.app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
 
     def gather_data(self):
-        return self.await_data(len(self.app.clients))
+        return self.await_data(len(self.app.clients), unwrap=False)
 
-    def await_data(self, n: int = 1):
+    def await_data(self, n: int = 1, unwrap: bool = True):
         while True:
             if len(self.app.data_incoming) >= n:
                 data = self.app.data_incoming[:n]
                 self.app.data_incoming = self.app.data_incoming[n:]
-                if n == 1:
+                if unwrap and n == 1:
                     return data[0][0]
                 else:
                     return data[0]
