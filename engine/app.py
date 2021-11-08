@@ -6,16 +6,13 @@ from time import sleep
 
 from typing import Dict, List, Tuple
 
-
 PARTICIPANT = (True, False)
 COORDINATOR = (False, True)
 BOTH = (True, True)
 
-
 STATE_RUNNING = 'running'
 STATE_ERROR = 'error'
 STATE_ACTION = 'action_required'
-
 
 OPERATION_ADD = 'add'
 OPERATION_MULTIPLY = 'multiply'
@@ -45,7 +42,7 @@ class App:
         self.data_incoming = []
         self.data_outgoing = []
 
-        self.default_smpc = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'range': 0}
+        self.default_smpc = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'exponent': 8}
 
         self.current_state: AppState or None = None
         self.states: Dict[str, AppState] = {}
@@ -217,12 +214,11 @@ class AppState:
             self.app.status_smpc = None
             self.app.status_available = True
 
-    def configure_smpc(self, range=0.0, shards=0, operation='add', serialization='json'):
-        self.app.default_smpc['range'] = range
+    def configure_smpc(self, exponent=8, shards=0, operation='add', serialization='json'):
+        self.app.default_smpc['exponent'] = exponent
         self.app.default_smpc['shards'] = shards
         self.app.default_smpc['operation'] = operation
         self.app.default_smpc['serialization'] = serialization
-
 
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False):
         if self.app.coordinator and not use_smpc:

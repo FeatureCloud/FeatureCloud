@@ -57,7 +57,7 @@ class DieState(AppState):
         self.update(progress=0.25)
         d = random.randint(1, 6)
         self.app.log(f'threw a {d}')  # This is how we can log a message for debugging purposes
-        self.configure_smpc(range=6, operation=OPERATION_ADD)  # SMPC needs a range in which the expected values lie (here 6) and an operation (either 'add' or 'multiply')
+        self.configure_smpc(exponent=6, operation=OPERATION_ADD)  # SMPC needs an exponent to transform numbers (here 6) into fixed-point values and an operation (either 'add' or 'multiply')
         self.send_data_to_coordinator(json.dumps(d), use_smpc=USE_SMPC)  # Here, we send data to the coordinator. `use_smpc` specifies whether we want to use SMPC
 
         if self.app.coordinator:
