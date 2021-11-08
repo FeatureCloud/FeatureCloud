@@ -203,7 +203,7 @@ class AppState:
 
     def gather_data(self):
         if not self.app.coordinator:
-            self.app.log("", fatal=True)
+            self.app.log('must be coordinator to use gather_data', level=LOG_LEVEL_FATAL)
         return self.await_data(len(self.app.clients), unwrap=False)
 
     def await_data(self, n: int = 1, unwrap: bool = True):
@@ -225,12 +225,6 @@ class AppState:
             self.app.status_destination = destination
             self.app.status_smpc = None
             self.app.status_available = True
-
-    def configure_smpc(self, exponent=8, shards=0, operation='add', serialization='json'):
-        self.app.default_smpc['exponent'] = exponent
-        self.app.default_smpc['shards'] = shards
-        self.app.default_smpc['operation'] = operation
-        self.app.default_smpc['serialization'] = serialization
 
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False):
         if self.app.coordinator and not use_smpc:
