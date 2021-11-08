@@ -1,11 +1,17 @@
 import datetime
+import json
+import numpy as np
+import pickle
 import sys
 import threading
 import traceback
 
 from enum import Enum
 from time import sleep
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, TypedDict, Literal
+
+
+DATA_POLL_INTERVAL = 0.1  # Interval (seconds) to check for new data pieces, adapt if necessary
 
 
 class Role(Enum):
@@ -35,6 +41,9 @@ class LogLevel(Enum):
     FATAL = 'fatal'
 
 
+SMPCType = TypedDict('SMPCType', {'operation': Literal['add', 'multiply'], 'serialization': Literal['json'], 'shards': int, 'exponent': int})
+
+
 class App:
 
     def __init__(self):
@@ -48,14 +57,14 @@ class App:
         self.status_finished: bool = False
         self.status_message: Union[str, None] = None
         self.status_progress: Union[float, None] = None
-        self.status_state: Union[State, None] = None
+        self.status_state: Union[str, None] = None
         self.status_destination: Union[str, None] = None
-        self.status_smpc = None
+        self.status_smpc: Union[SMPCType, None] = None
 
         self.data_incoming = []
         self.data_outgoing = []
 
-        self.default_smpc = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'exponent': 8}
+        self.default_smpc: SMPCType = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'exponent': 8}
 
         self.current_state: AppState or None = None
         self.states: Dict[str, AppState] = {}
@@ -88,7 +97,7 @@ class App:
         except Exception as e:  # catch all  # noqa
             self.log(traceback.format_exc())
             self.status_message = 'ERROR. See log for stack trace.'
-            self.status_state = State.ERROR
+            self.status_state = State.ERROR.value
             self.status_finished = True
 
     def run(self):
@@ -112,7 +121,7 @@ class App:
 
     def handle_incoming(self, data, client):
         # This method is called when new data arrives
-        self.data_incoming.append((data.read(), client))
+        self.data_incoming.append((data, client))
 
     def handle_outgoing(self):
         # This method is called when data is requested
@@ -213,26 +222,43 @@ class AppState:
     def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None):
         if not name:
             name = target
-        participant, coordinator = role
+        participant, coordinator = role.value
         self.app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
 
-    def gather_data(self):
+    def aggregate_data(self, operation: SMPCOperation, use_smpc=False):
+        """
+        Waits for all participants (including the coordinator instance) to send data and returns the aggregated value.
+
+        :param operation: specifies the aggregation type
+        :param use_smpc: if True, the data to be aggregated is expected to stem from an SMPC aggregation
+        :return: aggregated value
+        """
+
+        if use_smpc:
+            return self.await_data(1, unwrap=True, is_json=True)  # Data is aggregated already
+        else:
+            data = self.gather_data(is_json=False)
+            return _aggregate(data, operation)  # Data needs to be aggregated according to operation
+
+    def gather_data(self, is_json=False):
         """
         Waits for all participants (including the coordinator instance) to send data and returns a list containing the received data pieces. Only valid for the coordinator instance.
 
+        :param is_json: if True, expects a JSON serialized values and deserializes it accordingly
         :return: list of n data pieces, where n is the number of participants
         """
 
         if not self.app.coordinator:
             self.app.log('must be coordinator to use gather_data', level=LogLevel.FATAL)
-        return self.await_data(len(self.app.clients), unwrap=False)
+        return self.await_data(len(self.app.clients), unwrap=False, is_json=is_json)
 
-    def await_data(self, n: int = 1, unwrap: bool = True):
+    def await_data(self, n: int = 1, unwrap=True, is_json=False):
         """
         Waits for n data pieces and returns them.
 
         :param n: number of data pieces to wait for
         :param unwrap: if True, will return the first element of the collected data (only useful if n = 1)
+        :param is_json: if True, expects JSON serialized values and deserializes it accordingly
         :return: list of data pieces (if n > 1 or unwrap = False) or a single data piece (if n = 1 and unwrap = True)
         """
 
@@ -241,10 +267,10 @@ class AppState:
                 data = self.app.data_incoming[:n]
                 self.app.data_incoming = self.app.data_incoming[n:]
                 if n == 1 and unwrap:
-                    return data[0][0]
+                    return _deserialize_incoming(data[0][0], is_json=is_json)
                 else:
-                    return data[0]
-            sleep(1)
+                    return [_deserialize_incoming(d[0]) for d in data]
+            sleep(DATA_POLL_INTERVAL)
 
     def send_data_to_participant(self, data, destination):
         """
@@ -253,6 +279,8 @@ class AppState:
         :param data: data to be sent
         :param destination: destination client ID
         """
+
+        data = _serialize_outgoing(data, is_json=False)
 
         if destination == self.app.id:
             self.app.data_incoming.append((data, self.app.id))
@@ -271,6 +299,8 @@ class AppState:
         :param use_smpc: if True, the data will be sent as part of an SMPC aggregation step
         """
 
+        data = _serialize_outgoing(data, is_json=use_smpc)
+
         if self.app.coordinator and not use_smpc:
             if send_to_self:
                 self.app.data_incoming.append((data, self.app.id))
@@ -287,6 +317,8 @@ class AppState:
         :param data: data to be sent
         :param send_to_self: if True, the data will also be sent internally to this coordinator instance
         """
+
+        data = _serialize_outgoing(data, is_json=False)
 
         if not self.app.coordinator:
             self.app.log('only the coordinator can broadcast data', level=LogLevel.FATAL)
@@ -309,10 +341,18 @@ class AppState:
 
         self.app.default_smpc['exponent'] = exponent
         self.app.default_smpc['shards'] = shards
-        self.app.default_smpc['operation'] = operation
-        self.app.default_smpc['serialization'] = serialization
+        self.app.default_smpc['operation'] = operation.value
+        self.app.default_smpc['serialization'] = serialization.value
 
-    def update(self, message=None, progress=None, state=None):
+    def update(self, message: Union[str, None] = None, progress: Union[float, None] = None, state: Union[State, None] = None):
+        """
+        Updates information about the execution.
+
+        :param message: message briefly summarizing what is happening currently
+        :param progress: number between 0 and 1, indicating the overall progress
+        :param state: overall state (running, error or action_required)
+        """
+
         if message and len(message) > 40:
             self.app.log('message is too long (max: 40)', level=LogLevel.FATAL)
         if progress is not None and (progress < 0 or progress > 1):
@@ -321,11 +361,11 @@ class AppState:
             self.app.log('invalid state', level=LogLevel.FATAL)
         self.app.status_message = message
         self.app.status_progress = progress
-        self.app.status_state = state
+        self.app.status_state = state.value if state else None
 
 
 def app_state(app: App, name: str, role: Role = Role.BOTH, **kwargs):
-    participant, coordinator = role
+    participant, coordinator = role.value
     if not participant and not coordinator:
         app.log('either participant or coordinator must be True', level=LogLevel.FATAL)
 
@@ -334,3 +374,57 @@ def app_state(app: App, name: str, role: Role = Role.BOTH, **kwargs):
         return state_class
 
     return func
+
+
+def _serialize_outgoing(data, is_json=False):
+    """
+    Transforms a Python data object into a byte serialization.
+
+    :param data: data to serialize
+    :param is_json: indicates whether JSON serialization is required
+    :return: serialized data as bytes
+    """
+
+    if not is_json:
+        return pickle.dumps(data)
+
+    return json.dumps(data)
+
+
+def _deserialize_incoming(data, is_json=False):
+    """
+    Transforms serialized data bytes into a Python object.
+
+    :param data: data to deserialize
+    :param is_json: indicates whether JSON deserialization should be used
+    :return: deserialized data
+    """
+
+    if not is_json:
+        return pickle.loads(data)
+
+    return json.loads(data)
+
+
+def _aggregate(data, operation: SMPCOperation):
+    """
+    Aggregates a list of received values.
+
+    :param data: list of data pieces
+    :param operation: operation to use for aggregation (add or multiply)
+    :return: aggregated value
+    """
+
+    data_np = [np.array(d) for d in data]
+
+    aggregate = data_np[0]
+
+    if operation == SMPCOperation.ADD:
+        for d in data_np[1:]:
+            aggregate = aggregate + d
+
+    if operation == SMPCOperation.MULTIPLY:
+        for d in data_np[1:]:
+            aggregate = aggregate * d
+
+    return aggregate
