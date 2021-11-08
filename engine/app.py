@@ -1,4 +1,5 @@
 import datetime
+import sys
 import threading
 import traceback
 
@@ -16,6 +17,10 @@ STATE_ACTION = 'action_required'
 
 OPERATION_ADD = 'add'
 OPERATION_MULTIPLY = 'multiply'
+
+LOG_LEVEL_DEBUG = 'info'
+LOG_LEVEL_ERROR = 'error'
+LOG_LEVEL_FATAL = 'fatal'
 
 
 def data_to_bytes(d):
@@ -64,7 +69,7 @@ class App:
         self.current_state = self.states.get('initial')
 
         if not self.current_state:
-            raise RuntimeError('initial state not found')
+            self.log('initial state not found', level=LOG_LEVEL_FATAL)
 
         self.thread = threading.Thread(target=self.guarded_run)
         self.thread.start()
@@ -119,7 +124,7 @@ class App:
 
     def _register_state(self, name, state, participant, coordinator, **kwargs):
         if self.transitions.get(name):
-            raise RuntimeError(f'state {name} already exists')
+            self.log(f'state {name} already exists', level=LOG_LEVEL_FATAL)
 
         si = state(**kwargs)
         si.app = self
@@ -130,45 +135,50 @@ class App:
 
     def register_transition(self, name: str, source: str, target: str, participant=True, coordinator=True):
         if not participant and not coordinator:
-            raise RuntimeError('either participant or coordinator must be True')
+            self.log('either participant or coordinator must be True', level=LOG_LEVEL_FATAL)
 
         if self.transitions.get(name):
-            raise RuntimeError(f'transition {name} already exists')
+            self.log(f'transition {name} already exists', level=LOG_LEVEL_FATAL)
 
         source_state = self.states.get(source)
         if not source_state:
-            raise RuntimeError(f'source state {source} not found')
+            self.log(f'source state {source} not found', level=LOG_LEVEL_FATAL)
         if participant and not source_state.participant:
-            raise RuntimeError(f'source state {source} not accessible for participants')
+            self.log(f'source state {source} not accessible for participants', level=LOG_LEVEL_FATAL)
         if coordinator and not source_state.coordinator:
-            raise RuntimeError(f'source state {source} not accessible for the coordinator')
+            self.log(f'source state {source} not accessible for the coordinator', level=LOG_LEVEL_FATAL)
 
         target_state = self.states.get(target)
         if not target_state:
-            raise RuntimeError(f'target state {target} not found')
+            self.log(f'target state {target} not found', level=LOG_LEVEL_FATAL)
         if participant and not target_state.participant:
-            raise RuntimeError(f'target state {target} not accessible for participants')
+            self.log(f'target state {target} not accessible for participants', level=LOG_LEVEL_FATAL)
         if coordinator and not target_state.coordinator:
-            raise RuntimeError(f'target state {target} not accessible for the coordinator')
+            self.log(f'target state {target} not accessible for the coordinator', level=LOG_LEVEL_FATAL)
 
         self.transitions[name] = (source_state, target_state, participant, coordinator)
 
     def transition(self, name):
         transition = self.transitions.get(name)
         if not transition:
-            raise RuntimeError(f'transition {name} not found')
+            self.log(f'transition {name} not found', level=LOG_LEVEL_FATAL)
         if transition[0] != self.current_state:
-            raise RuntimeError(f'current state unequal to source state')
+            self.log(f'current state unequal to source state', level=LOG_LEVEL_FATAL)
         if not transition[2] and not self.coordinator:
-            raise RuntimeError(f'cannot perform transition {name} as participant')
+            self.log(f'cannot perform transition {name} as participant', level=LOG_LEVEL_FATAL)
         if not transition[3] and self.coordinator:
-            raise RuntimeError(f'cannot perform transition {name} as coordinator')
+            self.log(f'cannot perform transition {name} as coordinator', level=LOG_LEVEL_FATAL)
 
         self.transition_log.append((datetime.datetime.now(), name))
         self.current_state = transition[1]
 
-    def log(self, msg):
-        print(msg, flush=True)
+    def log(self, msg, level=LOG_LEVEL_DEBUG):
+        if level == LOG_LEVEL_FATAL:
+            raise RuntimeError(msg)
+        if level == LOG_LEVEL_ERROR:
+            print(msg, flush=True, file=sys.stderr)
+        else:
+            print(msg, flush=True)
 
 
 class AppState:
@@ -192,6 +202,8 @@ class AppState:
         self.app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
 
     def gather_data(self):
+        if not self.app.coordinator:
+            self.app.log("", fatal=True)
         return self.await_data(len(self.app.clients), unwrap=False)
 
     def await_data(self, n: int = 1, unwrap: bool = True):
@@ -232,7 +244,7 @@ class AppState:
 
     def broadcast_data(self, data, send_to_self=True):
         if not self.app.coordinator:
-            raise RuntimeError('only the coordinator can broadcast data')
+            self.app.log('only the coordinator can broadcast data', level=LOG_LEVEL_FATAL)
         self.app.data_outgoing.append((data, False, None))
         self.app.status_destination = None
         self.app.status_smpc = None
@@ -242,11 +254,11 @@ class AppState:
 
     def update(self, message=None, progress=None, state=None):
         if message and len(message) > 40:
-            raise RuntimeError('message is too long')
+            self.app.log('message is too long (max: 40)', level=LOG_LEVEL_FATAL)
         if progress is not None and (progress < 0 or progress > 1):
-            raise RuntimeError('progress must be between 0 and 1')
+            self.app.log('progress must be between 0 and 1', level=LOG_LEVEL_FATAL)
         if state is not None and state != STATE_RUNNING and state != STATE_ERROR and state != STATE_ACTION:
-            raise RuntimeError('invalid state')
+            self.app.log('invalid state', level=LOG_LEVEL_FATAL)
         self.app.status_message = message
         self.app.status_progress = progress
         self.app.status_state = state
@@ -255,7 +267,7 @@ class AppState:
 def app_state(app: App, name: str, role=BOTH, **kwargs):
     participant, coordinator = role
     if not participant and not coordinator:
-        raise RuntimeError('either participant or coordinator must be True')
+        app.log('either participant or coordinator must be True', level=LOG_LEVEL_FATAL)
 
     def func(state_class):
         app._register_state(name, state_class, participant, coordinator, **kwargs)
