@@ -1,7 +1,7 @@
 import random
 from time import sleep
 
-from engine.app import App, AppState, app_state, BOTH
+from engine.app import App, AppState, app_state, Role
 
 app = App()
 
@@ -14,7 +14,7 @@ def wrap_message(message, client):
 class InitialState(AppState):
 
     def register(self):
-        self.register_transition('redirect', BOTH)
+        self.register_transition('redirect', Role.BOTH)
 
     def run(self) -> str or None:
         if self.app.coordinator:
@@ -29,7 +29,7 @@ class InitialState(AppState):
 class InitialState(AppState):
 
     def register(self):
-        self.register_transition('redirect', BOTH)
+        self.register_transition('redirect', Role.BOTH)
 
     def run(self) -> str or None:
         message = self.await_data().decode()

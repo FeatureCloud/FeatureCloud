@@ -3,28 +3,36 @@ import sys
 import threading
 import traceback
 
+from enum import Enum
 from time import sleep
-
-from typing import Dict, List, Tuple
-
-PARTICIPANT = (True, False)
-COORDINATOR = (False, True)
-BOTH = (True, True)
-
-STATE_RUNNING = 'running'
-STATE_ERROR = 'error'
-STATE_ACTION = 'action_required'
-
-OPERATION_ADD = 'add'
-OPERATION_MULTIPLY = 'multiply'
-
-LOG_LEVEL_DEBUG = 'info'
-LOG_LEVEL_ERROR = 'error'
-LOG_LEVEL_FATAL = 'fatal'
+from typing import Dict, List, Tuple, Union
 
 
-def data_to_bytes(d):
-    return
+class Role(Enum):
+    PARTICIPANT = (True, False)
+    COORDINATOR = (False, True)
+    BOTH = (True, True)
+
+
+class State(Enum):
+    RUNNING = 'running'
+    ERROR = 'error'
+    ACTION = 'action_required'
+
+
+class SMPCOperation(Enum):
+    ADD = 'add'
+    MULTIPLY = 'multiply'
+
+
+class SMPCSerialization(Enum):
+    JSON = 'json'
+
+
+class LogLevel(Enum):
+    DEBUG = 'info'
+    ERROR = 'error'
+    FATAL = 'fatal'
 
 
 class App:
@@ -36,12 +44,12 @@ class App:
 
         self.thread = None
 
-        self.status_available = False
-        self.status_finished = False
-        self.status_message = None
-        self.status_progress = None
-        self.status_state = None
-        self.status_destination = None
+        self.status_available: bool = False
+        self.status_finished: bool = False
+        self.status_message: Union[str, None] = None
+        self.status_progress: Union[float, None] = None
+        self.status_state: Union[State, None] = None
+        self.status_destination: Union[str, None] = None
         self.status_smpc = None
 
         self.data_incoming = []
@@ -69,7 +77,7 @@ class App:
         self.current_state = self.states.get('initial')
 
         if not self.current_state:
-            self.log('initial state not found', level=LOG_LEVEL_FATAL)
+            self.log('initial state not found', level=LogLevel.FATAL)
 
         self.thread = threading.Thread(target=self.guarded_run)
         self.thread.start()
@@ -80,7 +88,7 @@ class App:
         except Exception as e:  # catch all  # noqa
             self.log(traceback.format_exc())
             self.status_message = 'ERROR. See log for stack trace.'
-            self.status_state = STATE_ERROR
+            self.status_state = State.ERROR
             self.status_finished = True
 
     def run(self):
@@ -124,7 +132,7 @@ class App:
 
     def _register_state(self, name, state, participant, coordinator, **kwargs):
         if self.transitions.get(name):
-            self.log(f'state {name} already exists', level=LOG_LEVEL_FATAL)
+            self.log(f'state {name} already exists', level=LogLevel.FATAL)
 
         si = state(**kwargs)
         si.app = self
@@ -135,47 +143,54 @@ class App:
 
     def register_transition(self, name: str, source: str, target: str, participant=True, coordinator=True):
         if not participant and not coordinator:
-            self.log('either participant or coordinator must be True', level=LOG_LEVEL_FATAL)
+            self.log('either participant or coordinator must be True', level=LogLevel.FATAL)
 
         if self.transitions.get(name):
-            self.log(f'transition {name} already exists', level=LOG_LEVEL_FATAL)
+            self.log(f'transition {name} already exists', level=LogLevel.FATAL)
 
         source_state = self.states.get(source)
         if not source_state:
-            self.log(f'source state {source} not found', level=LOG_LEVEL_FATAL)
+            self.log(f'source state {source} not found', level=LogLevel.FATAL)
         if participant and not source_state.participant:
-            self.log(f'source state {source} not accessible for participants', level=LOG_LEVEL_FATAL)
+            self.log(f'source state {source} not accessible for participants', level=LogLevel.FATAL)
         if coordinator and not source_state.coordinator:
-            self.log(f'source state {source} not accessible for the coordinator', level=LOG_LEVEL_FATAL)
+            self.log(f'source state {source} not accessible for the coordinator', level=LogLevel.FATAL)
 
         target_state = self.states.get(target)
         if not target_state:
-            self.log(f'target state {target} not found', level=LOG_LEVEL_FATAL)
+            self.log(f'target state {target} not found', level=LogLevel.FATAL)
         if participant and not target_state.participant:
-            self.log(f'target state {target} not accessible for participants', level=LOG_LEVEL_FATAL)
+            self.log(f'target state {target} not accessible for participants', level=LogLevel.FATAL)
         if coordinator and not target_state.coordinator:
-            self.log(f'target state {target} not accessible for the coordinator', level=LOG_LEVEL_FATAL)
+            self.log(f'target state {target} not accessible for the coordinator', level=LogLevel.FATAL)
 
         self.transitions[name] = (source_state, target_state, participant, coordinator)
 
     def transition(self, name):
         transition = self.transitions.get(name)
         if not transition:
-            self.log(f'transition {name} not found', level=LOG_LEVEL_FATAL)
+            self.log(f'transition {name} not found', level=LogLevel.FATAL)
         if transition[0] != self.current_state:
-            self.log(f'current state unequal to source state', level=LOG_LEVEL_FATAL)
+            self.log(f'current state unequal to source state', level=LogLevel.FATAL)
         if not transition[2] and not self.coordinator:
-            self.log(f'cannot perform transition {name} as participant', level=LOG_LEVEL_FATAL)
+            self.log(f'cannot perform transition {name} as participant', level=LogLevel.FATAL)
         if not transition[3] and self.coordinator:
-            self.log(f'cannot perform transition {name} as coordinator', level=LOG_LEVEL_FATAL)
+            self.log(f'cannot perform transition {name} as coordinator', level=LogLevel.FATAL)
 
         self.transition_log.append((datetime.datetime.now(), name))
         self.current_state = transition[1]
 
-    def log(self, msg, level=LOG_LEVEL_DEBUG):
-        if level == LOG_LEVEL_FATAL:
+    def log(self, msg, level: LogLevel = LogLevel.DEBUG):
+        """
+        Prints a log message or raises an exception according to the log level.
+
+        :param msg: message to be displayed
+        :param level: determines the channel (stdout, stderr) or whether to trigger an exception
+        """
+
+        if level == LogLevel.FATAL:
             raise RuntimeError(msg)
-        if level == LOG_LEVEL_ERROR:
+        if level == LogLevel.ERROR:
             print(msg, flush=True, file=sys.stderr)
         else:
             print(msg, flush=True)
@@ -195,18 +210,32 @@ class AppState:
     def run(self) -> str or None:
         pass
 
-    def register_transition(self, target: str, role=BOTH, name: str or None = None):
+    def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None):
         if not name:
             name = target
         participant, coordinator = role
         self.app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
 
     def gather_data(self):
+        """
+        Waits for all participants (including the coordinator instance) to send data and returns a list containing the received data pieces. Only valid for the coordinator instance.
+
+        :return: list of n data pieces, where n is the number of participants
+        """
+
         if not self.app.coordinator:
-            self.app.log('must be coordinator to use gather_data', level=LOG_LEVEL_FATAL)
+            self.app.log('must be coordinator to use gather_data', level=LogLevel.FATAL)
         return self.await_data(len(self.app.clients), unwrap=False)
 
     def await_data(self, n: int = 1, unwrap: bool = True):
+        """
+        Waits for n data pieces and returns them.
+
+        :param n: number of data pieces to wait for
+        :param unwrap: if True, will return the first element of the collected data (only useful if n = 1)
+        :return: list of data pieces (if n > 1 or unwrap = False) or a single data piece (if n = 1 and unwrap = True)
+        """
+
         while True:
             if len(self.app.data_incoming) >= n:
                 data = self.app.data_incoming[:n]
@@ -218,6 +247,13 @@ class AppState:
             sleep(1)
 
     def send_data_to_participant(self, data, destination):
+        """
+        Sends data to a particular participant identified by its ID.
+
+        :param data: data to be sent
+        :param destination: destination client ID
+        """
+
         if destination == self.app.id:
             self.app.data_incoming.append((data, self.app.id))
         else:
@@ -227,6 +263,14 @@ class AppState:
             self.app.status_available = True
 
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False):
+        """
+        Sends data to the coordinator instance.
+
+        :param data: data to be sent
+        :param send_to_self: if True, the data will also be sent internally to this instance (only applies to the coordinator instance)
+        :param use_smpc: if True, the data will be sent as part of an SMPC aggregation step
+        """
+
         if self.app.coordinator and not use_smpc:
             if send_to_self:
                 self.app.data_incoming.append((data, self.app.id))
@@ -237,8 +281,15 @@ class AppState:
             self.app.status_available = True
 
     def broadcast_data(self, data, send_to_self=True):
+        """
+        Broadcasts data to all participants (only valid for the coordinator instance).
+
+        :param data: data to be sent
+        :param send_to_self: if True, the data will also be sent internally to this coordinator instance
+        """
+
         if not self.app.coordinator:
-            self.app.log('only the coordinator can broadcast data', level=LOG_LEVEL_FATAL)
+            self.app.log('only the coordinator can broadcast data', level=LogLevel.FATAL)
         self.app.data_outgoing.append((data, False, None))
         self.app.status_destination = None
         self.app.status_smpc = None
@@ -246,7 +297,16 @@ class AppState:
         if send_to_self:
             self.app.data_incoming.append((data, self.app.id))
 
-    def configure_smpc(self, exponent=8, shards=0, operation='add', serialization='json'):
+    def configure_smpc(self, exponent: int = 8, shards: int = 0, operation: SMPCOperation = SMPCOperation.ADD, serialization: SMPCSerialization = SMPCSerialization.JSON):
+        """
+        Configures successive usage of SMPC aggregation performed in the FeatureCloud controller.
+
+        :param exponent: intag
+        :param shards:
+        :param operation:
+        :param serialization:
+        """
+
         self.app.default_smpc['exponent'] = exponent
         self.app.default_smpc['shards'] = shards
         self.app.default_smpc['operation'] = operation
@@ -254,20 +314,20 @@ class AppState:
 
     def update(self, message=None, progress=None, state=None):
         if message and len(message) > 40:
-            self.app.log('message is too long (max: 40)', level=LOG_LEVEL_FATAL)
+            self.app.log('message is too long (max: 40)', level=LogLevel.FATAL)
         if progress is not None and (progress < 0 or progress > 1):
-            self.app.log('progress must be between 0 and 1', level=LOG_LEVEL_FATAL)
-        if state is not None and state != STATE_RUNNING and state != STATE_ERROR and state != STATE_ACTION:
-            self.app.log('invalid state', level=LOG_LEVEL_FATAL)
+            self.app.log('progress must be between 0 and 1', level=LogLevel.FATAL)
+        if state is not None and state != State.RUNNING and state != State.ERROR and state != State.ACTION:
+            self.app.log('invalid state', level=LogLevel.FATAL)
         self.app.status_message = message
         self.app.status_progress = progress
         self.app.status_state = state
 
 
-def app_state(app: App, name: str, role=BOTH, **kwargs):
+def app_state(app: App, name: str, role: Role = Role.BOTH, **kwargs):
     participant, coordinator = role
     if not participant and not coordinator:
-        app.log('either participant or coordinator must be True', level=LOG_LEVEL_FATAL)
+        app.log('either participant or coordinator must be True', level=LogLevel.FATAL)
 
     def func(state_class):
         app._register_state(name, state_class, participant, coordinator, **kwargs)
