@@ -211,7 +211,7 @@ class AppState:
             if len(self.app.data_incoming) >= n:
                 data = self.app.data_incoming[:n]
                 self.app.data_incoming = self.app.data_incoming[n:]
-                if unwrap and n == 1:
+                if n == 1 and unwrap:
                     return data[0][0]
                 else:
                     return data[0]
@@ -245,6 +245,12 @@ class AppState:
         self.app.status_available = True
         if send_to_self:
             self.app.data_incoming.append((data, self.app.id))
+
+    def configure_smpc(self, exponent=8, shards=0, operation='add', serialization='json'):
+        self.app.default_smpc['exponent'] = exponent
+        self.app.default_smpc['shards'] = shards
+        self.app.default_smpc['operation'] = operation
+        self.app.default_smpc['serialization'] = serialization
 
     def update(self, message=None, progress=None, state=None):
         if message and len(message) > 40:
