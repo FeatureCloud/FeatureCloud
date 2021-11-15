@@ -10,7 +10,6 @@ from enum import Enum
 from time import sleep
 from typing import Dict, List, Tuple, Union, TypedDict, Literal
 
-
 DATA_POLL_INTERVAL = 0.1  # Interval (seconds) to check for new data pieces, adapt if necessary
 
 
@@ -193,8 +192,12 @@ class App:
         """
         Prints a log message or raises an exception according to the log level.
 
-        :param msg: message to be displayed
-        :param level: determines the channel (stdout, stderr) or whether to trigger an exception
+        Parameters
+        ----------
+        msg : str
+            message to be displayed
+        level : LogLevel, default=LogLevel.DEBUG
+            determines the channel (stdout, stderr) or whether to trigger an exception
         """
 
         if level == LogLevel.FATAL:
@@ -220,6 +223,19 @@ class AppState:
         pass
 
     def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None):
+        """
+        Registers a transition in the state machine.
+
+        Parameters
+        ----------
+        target : str
+            name of the target state
+        role : Role, default=Role.BOTH
+           role for which this transition is valid
+        name : str or None, default=None
+            name of the transition
+        """
+
         if not name:
             name = target
         participant, coordinator = role.value
@@ -229,9 +245,16 @@ class AppState:
         """
         Waits for all participants (including the coordinator instance) to send data and returns the aggregated value.
 
-        :param operation: specifies the aggregation type
-        :param use_smpc: if True, the data to be aggregated is expected to stem from an SMPC aggregation
-        :return: aggregated value
+        Parameters
+        ----------
+        operation : SMPCOperation
+            specifies the aggregation type
+        use_smpc : bool, default=False
+            if True, the data to be aggregated is expected to stem from an SMPC aggregation
+
+        Returns
+        ----------
+        aggregated value
         """
 
         if use_smpc:
@@ -244,8 +267,14 @@ class AppState:
         """
         Waits for all participants (including the coordinator instance) to send data and returns a list containing the received data pieces. Only valid for the coordinator instance.
 
-        :param is_json: if True, expects a JSON serialized values and deserializes it accordingly
-        :return: list of n data pieces, where n is the number of participants
+        Parameters
+        ----------
+        is_json : bool, default=False
+            if True, expects a JSON serialized values and deserializes it accordingly
+
+        Returns
+        ----------
+        list of n data pieces, where n is the number of participants
         """
 
         if not self.app.coordinator:
@@ -256,10 +285,18 @@ class AppState:
         """
         Waits for n data pieces and returns them.
 
-        :param n: number of data pieces to wait for
-        :param unwrap: if True, will return the first element of the collected data (only useful if n = 1)
-        :param is_json: if True, expects JSON serialized values and deserializes it accordingly
-        :return: list of data pieces (if n > 1 or unwrap = False) or a single data piece (if n = 1 and unwrap = True)
+        Parameters
+        ----------
+        n : int, default=1
+            number of data pieces to wait for
+        unwrap : bool, default=True
+            if True, will return the first element of the collected data (only useful if n = 1)
+        is_json : bool, default=False
+            if True, expects JSON serialized values and deserializes it accordingly
+
+        Returns
+        ----------
+        list of data pieces (if n > 1 or unwrap = False) or a single data piece (if n = 1 and unwrap = True)
         """
 
         while True:
@@ -276,8 +313,12 @@ class AppState:
         """
         Sends data to a particular participant identified by its ID.
 
-        :param data: data to be sent
-        :param destination: destination client ID
+        Parameters
+        ----------
+        data : object
+            data to be sent
+        destination : str
+            destination client ID
         """
 
         data = _serialize_outgoing(data, is_json=False)
@@ -294,9 +335,14 @@ class AppState:
         """
         Sends data to the coordinator instance.
 
-        :param data: data to be sent
-        :param send_to_self: if True, the data will also be sent internally to this instance (only applies to the coordinator instance)
-        :param use_smpc: if True, the data will be sent as part of an SMPC aggregation step
+        Parameters
+        ----------
+        data : object
+            data to be sent
+        send_to_self : bool, default=True
+            if True, the data will also be sent internally to this instance (only applies to the coordinator instance)
+        use_smpc : bool, default=False
+            if True, the data will be sent as part of an SMPC aggregation step
         """
 
         data = _serialize_outgoing(data, is_json=use_smpc)
@@ -314,8 +360,12 @@ class AppState:
         """
         Broadcasts data to all participants (only valid for the coordinator instance).
 
-        :param data: data to be sent
-        :param send_to_self: if True, the data will also be sent internally to this coordinator instance
+        Parameters
+        ----------
+        data : object
+            data to be sent
+        send_to_self : bool
+            if True, the data will also be sent internally to this coordinator instance
         """
 
         data = _serialize_outgoing(data, is_json=False)
@@ -333,10 +383,16 @@ class AppState:
         """
         Configures successive usage of SMPC aggregation performed in the FeatureCloud controller.
 
-        :param exponent: intag
-        :param shards:
-        :param operation:
-        :param serialization:
+        Parameters
+        ----------
+        exponent : int, default=8
+            exponent to be used for converting floating point numbers to fixed-point numbers
+        shards : int, default=0
+            number of secrets to be created, if 0, the total number of participants will be used
+        operation : SMPCOperation, default=SMPCOperation.ADD
+            operation to perform for aggregation
+        serialization : SMPCSerialization, default=SMPCSerialization.JSON
+            serialization to be used for the data
         """
 
         self.app.default_smpc['exponent'] = exponent
@@ -348,9 +404,14 @@ class AppState:
         """
         Updates information about the execution.
 
-        :param message: message briefly summarizing what is happening currently
-        :param progress: number between 0 and 1, indicating the overall progress
-        :param state: overall state (running, error or action_required)
+        Parameters
+        ----------
+        message : str
+            message briefly summarizing what is happening currently
+        progress : float
+            number between 0 and 1, indicating the overall progress
+        state : State or None
+            overall state (running, error or action_required)
         """
 
         if message and len(message) > 40:
@@ -380,9 +441,16 @@ def _serialize_outgoing(data, is_json=False):
     """
     Transforms a Python data object into a byte serialization.
 
-    :param data: data to serialize
-    :param is_json: indicates whether JSON serialization is required
-    :return: serialized data as bytes
+    Parameters
+    ----------
+    data : object
+        data to serialize
+    is_json : bool, default=False
+        indicates whether JSON serialization is required
+
+    Returns
+    ----------
+    serialized data as bytes
     """
 
     if not is_json:
@@ -391,13 +459,20 @@ def _serialize_outgoing(data, is_json=False):
     return json.dumps(data)
 
 
-def _deserialize_incoming(data, is_json=False):
+def _deserialize_incoming(data: bytes, is_json=False):
     """
     Transforms serialized data bytes into a Python object.
 
-    :param data: data to deserialize
-    :param is_json: indicates whether JSON deserialization should be used
-    :return: deserialized data
+    Parameters
+    ----------
+    data : bytes
+        data to deserialize
+    is_json : bool, default=False
+        indicates whether JSON deserialization should be used
+
+    Returns
+    ----------
+    deserialized data
     """
 
     if not is_json:
@@ -410,9 +485,16 @@ def _aggregate(data, operation: SMPCOperation):
     """
     Aggregates a list of received values.
 
-    :param data: list of data pieces
-    :param operation: operation to use for aggregation (add or multiply)
-    :return: aggregated value
+    Parameters
+    ----------
+    data : array_like
+        list of data pieces
+    operation : SMPCOperation
+        operation to use for aggregation (add or multiply)
+
+    Returns
+    ----------
+    aggregated value
     """
 
     data_np = [np.array(d) for d in data]
