@@ -10,5 +10,8 @@ app = App()
 @app_state(app, 'initial')  # The first argument is the name of the state ('initial'), the second specifies which roles are allowed to have this state (here BOTH)
 class InitialState(AppState):
 
-    def run(self) -> str or None:
-        return None  # This means we are done. If the coordinator transitions into the `None` state, the whole computation will be shut down
+    def register(self):
+        self.register_transition('terminal')  # We declare that 'terminal' is accessible from the 'initial' state
+
+    def run(self):
+        return 'terminal'  # This means we are done. If the coordinator transitions into the 'terminal' state, the whole computation will be shut down

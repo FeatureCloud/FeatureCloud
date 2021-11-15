@@ -8,7 +8,6 @@ This demo implementation works as follows:
 """
 
 #  Imports
-import json
 import random
 from time import sleep
 
@@ -90,9 +89,12 @@ class ObtainState(AppState):
     Here we print the received sum.
     """
 
+    def register(self):
+        self.register_transition('terminal')
+
     def run(self) -> str or None:
         self.update(progress=0.9)
         s = self.await_data()
         self.app.log(f'sum is {s}')
         self.update(message=f'obtained sum {s}')
-        return None  # This means we are done. If the coordinator transitions into the `None` state, the whole computation will be shut down
+        return 'terminal'  # This means we are done. If the coordinator transitions into the 'terminal' state, the whole computation will be shut down

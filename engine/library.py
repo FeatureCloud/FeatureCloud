@@ -7,7 +7,7 @@ from engine.app import AppState
 
 class BlankState(AppState):
 
-    def __init__(self, next_state=None):
+    def __init__(self, next_state: str = 'terminal'):
         super().__init__()
         self.next_state = next_state
 

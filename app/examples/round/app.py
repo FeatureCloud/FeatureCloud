@@ -16,7 +16,7 @@ class InitialState(AppState):
     def register(self):
         self.register_transition('redirect', Role.BOTH)
 
-    def run(self) -> str or None:
+    def run(self):
         if self.app.coordinator:
             client = random.choice(self.app.clients)
             message = wrap_message('Hello World!', self.app.id)
@@ -26,17 +26,18 @@ class InitialState(AppState):
 
 
 @app_state(app, 'redirect')
-class InitialState(AppState):
+class RedirectState(AppState):
 
     def register(self):
         self.register_transition('redirect', Role.BOTH)
+        self.register_transition('terminal', Role.COORDINATOR)
 
-    def run(self) -> str or None:
+    def run(self):
         message = self.await_data().decode()
         self.app.log(f'Received: {message}')
 
         if self.app.coordinator and message.startswith('DONE:'):
-            return None
+            return 'terminal'
 
         if message.count('(') >= len(self.app.clients):
             self.app.log(f'Send to coordinator')

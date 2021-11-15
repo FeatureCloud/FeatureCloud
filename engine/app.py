@@ -40,7 +40,11 @@ class LogLevel(Enum):
     FATAL = 'fatal'
 
 
-SMPCType = TypedDict('SMPCType', {'operation': Literal['add', 'multiply'], 'serialization': Literal['json'], 'shards': int, 'exponent': int})
+class SMPCType(TypedDict):
+    operation: Literal['add', 'multiply']
+    serialization: Literal['json']
+    shards: int
+    exponent: int
 
 
 class App:
@@ -72,6 +76,11 @@ class App:
 
         self.internal = {}
 
+        # Add terminal state
+        @app_state(self, 'terminal', Role.BOTH)
+        class TerminalState(AppState):
+            pass
+
     def handle_setup(self, client_id, coordinator, clients):
         # This method is called once upon startup and contains information about the execution context of this instance
         self.id = client_id
@@ -95,7 +104,7 @@ class App:
             self.run()
         except Exception as e:  # catch all  # noqa
             self.log(traceback.format_exc())
-            self.status_message = 'ERROR. See log for stack trace.'
+            self.status_message = e.__class__.__name__
             self.status_state = State.ERROR.value
             self.status_finished = True
 
@@ -103,14 +112,13 @@ class App:
         while True:
             self.log(f'state: {self.current_state.name}')
             transition = self.current_state.run()
-            if not transition:
-                self.status_progress = 1.0
-                self.log(f'done')
-                sleep(10)
-                self.status_finished = True
-                return
             self.log(f'transition: {transition}')
             self.transition(f'{self.current_state.name}_{transition}')
+            if self.current_state.name == 'terminal':
+                self.status_progress = 1.0
+                self.log(f'done')
+                self.status_finished = True
+                return
             sleep(1)
 
     def register(self):
@@ -219,7 +227,7 @@ class AppState:
     def register(self):
         pass
 
-    def run(self) -> str or None:
+    def run(self) -> str:
         pass
 
     def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None):

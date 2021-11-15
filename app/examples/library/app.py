@@ -22,7 +22,7 @@ class ConfigState(ConfigState):
     pass
 
 
-@app_state(app, 'display', next_state=None)
+@app_state(app, 'display', next_state='terminal')
 class InitialState(BlankState):
 
     def run(self):
