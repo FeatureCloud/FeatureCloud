@@ -1,16 +1,14 @@
 import random
 from time import sleep
 
-from engine.app import App, AppState, app_state, Role
-
-app = App()
+from engine.app import AppState, app_state, Role
 
 
 def wrap_message(message, client):
     return f'{client}({message})'
 
 
-@app_state(app, 'initial')
+@app_state('initial')
 class InitialState(AppState):
 
     def register(self):
@@ -25,7 +23,7 @@ class InitialState(AppState):
         return 'redirect'
 
 
-@app_state(app, 'redirect')
+@app_state('redirect')
 class RedirectState(AppState):
 
     def register(self):

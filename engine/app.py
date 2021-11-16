@@ -1,3 +1,4 @@
+import abc
 import datetime
 import json
 import numpy as np
@@ -11,6 +12,8 @@ from time import sleep
 from typing import Dict, List, Tuple, Union, TypedDict, Literal
 
 DATA_POLL_INTERVAL = 0.1  # Interval (seconds) to check for new data pieces, adapt if necessary
+TERMINAL_WAIT = 10  # Time (seconds) to wait before final shutdown, to allow the controller to pick up the newest progress etc.
+TRANSITION_WAIT = 1  # Time (seconds) to wait between state transitions
 
 
 class Role(Enum):
@@ -69,7 +72,7 @@ class App:
 
         self.default_smpc: SMPCType = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'exponent': 8}
 
-        self.current_state: AppState or None = None
+        self.current_state: Union[AppState, None] = None
         self.states: Dict[str, AppState] = {}
         self.transitions: Dict[str, Tuple[AppState, AppState, bool, bool]] = {}  # name => (source, target, participant, coordinator)
         self.transition_log: List[Tuple[datetime.datetime, str]] = []
@@ -77,9 +80,13 @@ class App:
         self.internal = {}
 
         # Add terminal state
-        @app_state(self, 'terminal', Role.BOTH)
+        @app_state('terminal', Role.BOTH, self)
         class TerminalState(AppState):
-            pass
+            def register(self):
+                pass
+
+            def run(self) -> str:
+                pass
 
     def handle_setup(self, client_id, coordinator, clients):
         # This method is called once upon startup and contains information about the execution context of this instance
@@ -117,9 +124,10 @@ class App:
             if self.current_state.name == 'terminal':
                 self.status_progress = 1.0
                 self.log(f'done')
+                sleep(TERMINAL_WAIT)
                 self.status_finished = True
                 return
-            sleep(1)
+            sleep(TRANSITION_WAIT)
 
     def register(self):
         for s in self.states:
@@ -216,7 +224,7 @@ class App:
             print(msg, flush=True)
 
 
-class AppState:
+class AppState(abc.ABC):
 
     def __init__(self):
         self.app = None
@@ -224,9 +232,11 @@ class AppState:
         self.participant = None
         self.coordinator = None
 
+    @abc.abstractmethod
     def register(self):
         pass
 
+    @abc.abstractmethod
     def run(self) -> str:
         pass
 
@@ -433,13 +443,16 @@ class AppState:
         self.app.status_state = state.value if state else None
 
 
-def app_state(app: App, name: str, role: Role = Role.BOTH, **kwargs):
+def app_state(name: str, role: Role = Role.BOTH, app_instance: Union[App, None] = None, **kwargs):
+    if app_instance is None:
+        app_instance = app
+
     participant, coordinator = role.value
     if not participant and not coordinator:
-        app.log('either participant or coordinator must be True', level=LogLevel.FATAL)
+        app_instance.log('either participant or coordinator must be True', level=LogLevel.FATAL)
 
     def func(state_class):
-        app._register_state(name, state_class, participant, coordinator, **kwargs)
+        app_instance._register_state(name, state_class, participant, coordinator, **kwargs)
         return state_class
 
     return func
@@ -518,3 +531,6 @@ def _aggregate(data, operation: SMPCOperation):
             aggregate = aggregate * d
 
     return aggregate
+
+
+app = App()

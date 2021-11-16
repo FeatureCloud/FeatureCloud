@@ -2,7 +2,9 @@
 
 import pydot
 
-from app import app
+import apps.examples.dice
+
+from engine.app import app
 
 
 if __name__ == '__main__':

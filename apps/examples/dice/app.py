@@ -11,11 +11,8 @@ This demo implementation works as follows:
 import random
 from time import sleep
 
-from engine.app import App, AppState, app_state, Role, SMPCOperation
+from engine.app import AppState, app_state, Role, SMPCOperation
 
-# This is the app instance, which holds various values and is used by the app states below
-# You shouldn't access this app instance directly, just ignore it for now
-app = App()
 
 # Here we can toggle if we want to use Secure Multi-Party Computation (SMPC)
 # This is a custom flag we are only using internally in the implementation below
@@ -24,7 +21,7 @@ USE_SMPC = True
 
 # This is the first (initial) state all app instances are in at the beginning
 # By calling it 'initial' the FeatureCloud template engine knows that this state is the first one to go into automatically at the beginning
-@app_state(app, 'initial', Role.BOTH)  # The first argument is the name of the state ('initial'), the second specifies which roles are allowed to have this state (here BOTH)
+@app_state('initial', Role.BOTH)  # The first argument is the name of the state ('initial'), the second specifies which roles are allowed to have this state (here BOTH)
 class InitialState(AppState):
     """
     This is the initial state from which we directly transition to the dice state.
@@ -41,7 +38,7 @@ class InitialState(AppState):
         return 'throw_die'  # By returning a string, we specify which state we want to go into next (here 'throw_die'). It has to match another state string (see below).
 
 
-@app_state(app, 'throw_die', Role.BOTH)
+@app_state('throw_die', Role.BOTH)
 class DieState(AppState):
     """
     Here we throw the die and send the data away.
@@ -64,7 +61,7 @@ class DieState(AppState):
             return 'obtain'
 
 
-@app_state(app, 'aggregate', Role.COORDINATOR)
+@app_state('aggregate', Role.COORDINATOR)
 class AggregateState(AppState):
     """
     Here we aggregate the values and broadcast them.
@@ -83,7 +80,7 @@ class AggregateState(AppState):
         return 'obtain'
 
 
-@app_state(app, 'obtain', Role.BOTH)
+@app_state('obtain', Role.BOTH)
 class ObtainState(AppState):
     """
     Here we print the received sum.
