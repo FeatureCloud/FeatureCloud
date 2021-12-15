@@ -23,14 +23,15 @@ parser.add_argument('--traffic', type=str, default=None, help='Show the traffic 
 
 def fc_command():
     args = parser.parse_args()
-    details = subprocess.check_output(['pip3', 'show', 'FeatureCloud'])
+    python = sys.executable
+    details = subprocess.check_output([python, '-m', 'pip', 'show', 'FeatureCloud'])
     path = None
     for pair in details.decode('utf-8').strip().split("\n"):
         if "location:" in pair.lower():
             path = pair.strip().split(":")[-1].strip()
     if path is None:
         raise KeyError("There is no location")
-    python = sys.executable
+
     cli = f"{path}/FeatureCloud/cli/cli.py"
     for k, v in vars(args).items():
         if v is not None:
