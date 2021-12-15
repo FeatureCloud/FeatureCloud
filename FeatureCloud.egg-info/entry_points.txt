@@ -1,5 +1,0 @@
-[console_scripts]
-FeatureCloud = FeatureCloud.__main__:fc_command
-fc = FeatureCloud.__main__:fc_command
-featurecloud = FeatureCloud.__main__:fc_command
-
