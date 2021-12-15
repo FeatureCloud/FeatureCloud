@@ -1,7 +1,7 @@
 FeatureCloud/venv
 FeatureCloud/server_config
 FeatureCloud/.dockerignore
-FeatureCloud/FeatureCloud.egg-info
+FeatureCloud/FeatureCloud.egg-info/*
 FeatureCloud/LICENSE
 FeatureCloud/Dockerfile
 FeatureCloud/README.md

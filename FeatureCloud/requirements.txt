@@ -1,6 +1,0 @@
-bottle
-jsonpickle
-joblib
-numpy
-pydot
-pyyaml
