@@ -21,5 +21,5 @@ class ConfigState(ConfigState):
 class InitialState(BlankState):
 
     def run(self):
-        config = self.app.internal['my_config']
-        self.app.log(f'Config: {config}')
+        config = self.load('my_config')
+        self.log(f'Config: {config}')

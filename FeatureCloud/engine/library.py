@@ -39,5 +39,5 @@ class ConfigState(BlankState):
     def run(self):
         if self.section:
             with open('/mnt/input/config.yml') as f:
-                self.app.internal[self.config] = yaml.load(f, Loader=yaml.FullLoader)[self.section]
+                self.store(self.config, yaml.load(f, Loader=yaml.FullLoader)[self.section])
         return super().run()

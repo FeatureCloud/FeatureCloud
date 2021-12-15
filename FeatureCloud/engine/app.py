@@ -12,7 +12,8 @@ from time import sleep
 from typing import Dict, List, Tuple, Union, TypedDict, Literal
 
 DATA_POLL_INTERVAL = 0.1  # Interval (seconds) to check for new data pieces, adapt if necessary
-TERMINAL_WAIT = 10  # Time (seconds) to wait before final shutdown, to allow the controller to pick up the newest progress etc.
+TERMINAL_WAIT = 10  # Time (seconds) to wait before final shutdown, to allow the controller to pick up the newest
+# progress etc.
 TRANSITION_WAIT = 1  # Time (seconds) to wait between state transitions
 
 
@@ -51,13 +52,56 @@ class SMPCType(TypedDict):
 
 
 class App:
+    """ Implementing the workflow for the FeatureCloud platform.
+
+    Attributes
+    ----------
+    id: str
+    coordinator: bool
+    clients: list
+
+    status_available: bool
+    status_finished: bool
+    status_message: str
+    status_progress: float
+    status_state: str
+    status_destination: str
+    status_smpc: dict
+
+    default_smpc: dict
+
+    data_incoming: list
+    data_outgoing: list
+    thread: threading.Thread
+
+    states: Dict[str, AppState]
+    transitions: Dict[str, Tuple[AppState, AppState, bool, bool]]
+    transition_log: List[Tuple[datetime.datetime, str]]
+    internal: dict
+
+    current_state: str
+
+
+    Methods
+    -------
+    handle_setup(client_id, coordinator, clients)
+    handle_incoming(data)
+    handle_outgoing()
+    guarded_run()
+    run()
+    register()
+    _register_state(name, state, participant, coordinator, **kwargs)
+    register_transition(name, source, participant, coordinator)
+    transition()
+    log()
+    """
 
     def __init__(self):
         self.id = None
         self.coordinator = None
         self.clients = None
 
-        self.thread = None
+        self.thread: Union[threading.Thread, None] = None
 
         self.status_available: bool = False
         self.status_finished: bool = False
@@ -74,7 +118,8 @@ class App:
 
         self.current_state: Union[AppState, None] = None
         self.states: Dict[str, AppState] = {}
-        self.transitions: Dict[str, Tuple[AppState, AppState, bool, bool]] = {}  # name => (source, target, participant, coordinator)
+        self.transitions: Dict[
+            str, Tuple[AppState, AppState, bool, bool]] = {}  # name => (source, target, participant, coordinator)
         self.transition_log: List[Tuple[datetime.datetime, str]] = []
 
         self.internal = {}
@@ -89,7 +134,17 @@ class App:
                 pass
 
     def handle_setup(self, client_id, coordinator, clients):
-        # This method is called once upon startup and contains information about the execution context of this instance
+        """ It will be called on startup and contains information about the 
+            execution context of this instance. And registers all of the states.
+
+
+        Parameters
+        ----------
+        client_id: str
+        coordinator: bool
+        clients: list
+
+        """
         self.id = client_id
         self.coordinator = coordinator
         self.clients = clients
@@ -107,6 +162,9 @@ class App:
         self.thread.start()
 
     def guarded_run(self):
+        """ run the workflow while trying to catch possible exceptions
+
+        """
         try:
             self.run()
         except Exception as e:  # catch all  # noqa
@@ -116,6 +174,11 @@ class App:
             self.status_finished = True
 
     def run(self):
+        """    Runs the workflow, logs the current state, executes it,
+               and handles the transition to the next desired state.
+               Once the app transits to the terminal state, the workflow will be terminated.
+
+       """
         while True:
             self.log(f'state: {self.current_state.name}')
             transition = self.current_state.run()
@@ -130,16 +193,33 @@ class App:
             sleep(TRANSITION_WAIT)
 
     def register(self):
+        """ Registers all of the states transitions
+            it should be called once all of the states are registered.
+
+        """
         for s in self.states:
             state = self.states[s]
             state.register()
 
     def handle_incoming(self, data, client):
-        # This method is called when new data arrives
+        """ When new data arrives, it appends it to the
+            `data_incoming` attribute to be accessible for app states.
+
+        Parameters
+        ----------
+        data: list
+            encoded data
+        client: str
+            Id of the client that Sent the data
+
+        """
         self.data_incoming.append((data, client))
 
     def handle_outgoing(self):
-        # This method is called when data is requested
+        """ When it is requested to send some data to other client/s
+            it will be called to deliver the data to the FeatureCloud Controller.
+
+        """
         if len(self.data_outgoing) == 0:
             return None
         data = self.data_outgoing[0]
@@ -155,17 +235,45 @@ class App:
         return data[0]
 
     def _register_state(self, name, state, participant, coordinator, **kwargs):
+        """ Instantiates a state, provides app-level information and adds it as part of the app workflow.
+
+        Parameters
+        ----------
+        name: str
+        state: AppState
+        participant: bool
+        coordinator: bool
+
+        """
         if self.transitions.get(name):
             self.log(f'state {name} already exists', level=LogLevel.FATAL)
 
         si = state(**kwargs)
-        si.app = self
+        si._app = self
         si.name = name
         si.participant = participant
         si.coordinator = coordinator
         self.states[si.name] = si
 
     def register_transition(self, name: str, source: str, target: str, participant=True, coordinator=True):
+        """ Receives transition registration parameters, check the validity of its logic,
+            and consider it as one possible transitions in the workflow.
+            There will be exceptions if apps try to register a transition with contradicting roles.
+
+        Parameters
+        ----------
+        name: str
+            Name of the transition
+        source: str
+            Name of the source state
+        target: str
+            Name of the target state
+        participant: bool
+            Indicates whether the transition is allowed for participant role
+        coordinator: bool
+            Indicates whether the transition is allowed for the coordinator role
+
+        """
         if not participant and not coordinator:
             self.log('either participant or coordinator must be True', level=LogLevel.FATAL)
 
@@ -191,6 +299,16 @@ class App:
         self.transitions[name] = (source_state, target_state, participant, coordinator)
 
     def transition(self, name):
+        """ Transits the app workflow to the unique next state based on
+            current states, the role of the FeatureCloud client,
+            and requirements of registered transitions for the current state.
+
+        Parameters
+        ----------
+        name: str
+            Name of the transition(which includes name of current and the next state).
+
+        """
         transition = self.transitions.get(name)
         if not transition:
             self.log(f'transition {name} not found', level=LogLevel.FATAL)
@@ -216,6 +334,8 @@ class App:
             determines the channel (stdout, stderr) or whether to trigger an exception
         """
 
+        msg = f'[Time: {datetime.datetime.now().strftime("%d.%m.%y %H:%M:%S")}] [Level: {level.value}] {msg}'
+
         if level == LogLevel.FATAL:
             raise RuntimeError(msg)
         if level == LogLevel.ERROR:
@@ -223,22 +343,66 @@ class App:
         else:
             print(msg, flush=True)
 
-
 class AppState(abc.ABC):
+    """ Defining custom states
+
+    Attributes:
+    -----------
+    app: App
+    name: str
+    participant: bool
+    coordinator: bool
+
+    Methods:
+    --------
+    register()
+    run()
+    register_transition(target, role, name)
+    aggregate_data(operation, use_smpc)
+    gather_data(is_json)
+    await_data(n, unwrap, is_json)
+    send_data_to_participant(data, destination)
+    configure_smpc(exponent, shards, operation, serialization)
+    send_data_to_coordinator(data, send_to_self, use_smpc)
+    broadcast_data(data, send_to_self)
+    update(message, progress, state)
+
+    """
 
     def __init__(self):
-        self.app = None
+        self._app = None
         self.name = None
         self.participant = None
         self.coordinator = None
 
     @abc.abstractmethod
     def register(self):
-        pass
+        """ This is an abstract method that should be implemented by developers
+            it calls AppState.register_transition to register transitions for state.
+            it will be called in App.register method so that, once all states are defined,
+            in a verifiable way, all app transitions can be registered.
+
+        """
 
     @abc.abstractmethod
     def run(self) -> str:
-        pass
+        """ It is an abstract method that should be implemented by developers,
+            to execute all local or global operation and calculations of the state.
+            It will be called in App.run() method so that the state perform its operations.
+
+        """
+
+    @property
+    def is_coordinator(self):
+        return self._app.coordinator
+
+    @property
+    def clients(self):
+        return self._app.clients
+
+    @property
+    def id(self):
+        return self._app.id
 
     def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None):
         """
@@ -257,7 +421,7 @@ class AppState(abc.ABC):
         if not name:
             name = target
         participant, coordinator = role.value
-        self.app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
+        self._app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
 
     def aggregate_data(self, operation: SMPCOperation, use_smpc=False):
         """
@@ -295,9 +459,9 @@ class AppState(abc.ABC):
         list of n data pieces, where n is the number of participants
         """
 
-        if not self.app.coordinator:
-            self.app.log('must be coordinator to use gather_data', level=LogLevel.FATAL)
-        return self.await_data(len(self.app.clients), unwrap=False, is_json=is_json)
+        if not self._app.coordinator:
+            self._app.log('must be coordinator to use gather_data', level=LogLevel.FATAL)
+        return self.await_data(len(self._app.clients), unwrap=False, is_json=is_json)
 
     def await_data(self, n: int = 1, unwrap=True, is_json=False):
         """
@@ -318,9 +482,9 @@ class AppState(abc.ABC):
         """
 
         while True:
-            if len(self.app.data_incoming) >= n:
-                data = self.app.data_incoming[:n]
-                self.app.data_incoming = self.app.data_incoming[n:]
+            if len(self._app.data_incoming) >= n:
+                data = self._app.data_incoming[:n]
+                self._app.data_incoming = self._app.data_incoming[n:]
                 if n == 1 and unwrap:
                     return _deserialize_incoming(data[0][0], is_json=is_json)
                 else:
@@ -341,13 +505,13 @@ class AppState(abc.ABC):
 
         data = _serialize_outgoing(data, is_json=False)
 
-        if destination == self.app.id:
-            self.app.data_incoming.append((data, self.app.id))
+        if destination == self._app.id:
+            self._app.data_incoming.append((data, self._app.id))
         else:
-            self.app.data_outgoing.append((data, False, destination))
-            self.app.status_destination = destination
-            self.app.status_smpc = None
-            self.app.status_available = True
+            self._app.data_outgoing.append((data, False, destination))
+            self._app.status_destination = destination
+            self._app.status_smpc = None
+            self._app.status_available = True
 
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False):
         """
@@ -365,14 +529,14 @@ class AppState(abc.ABC):
 
         data = _serialize_outgoing(data, is_json=use_smpc)
 
-        if self.app.coordinator and not use_smpc:
+        if self._app.coordinator and not use_smpc:
             if send_to_self:
-                self.app.data_incoming.append((data, self.app.id))
+                self._app.data_incoming.append((data, self._app.id))
         else:
-            self.app.data_outgoing.append((data, use_smpc, None))
-            self.app.status_destination = None
-            self.app.status_smpc = self.app.default_smpc if use_smpc else None
-            self.app.status_available = True
+            self._app.data_outgoing.append((data, use_smpc, None))
+            self._app.status_destination = None
+            self._app.status_smpc = self._app.default_smpc if use_smpc else None
+            self._app.status_available = True
 
     def broadcast_data(self, data, send_to_self=True):
         """
@@ -388,16 +552,17 @@ class AppState(abc.ABC):
 
         data = _serialize_outgoing(data, is_json=False)
 
-        if not self.app.coordinator:
-            self.app.log('only the coordinator can broadcast data', level=LogLevel.FATAL)
-        self.app.data_outgoing.append((data, False, None))
-        self.app.status_destination = None
-        self.app.status_smpc = None
-        self.app.status_available = True
+        if not self._app.coordinator:
+            self._app.log('only the coordinator can broadcast data', level=LogLevel.FATAL)
+        self._app.data_outgoing.append((data, False, None))
+        self._app.status_destination = None
+        self._app.status_smpc = None
+        self._app.status_available = True
         if send_to_self:
-            self.app.data_incoming.append((data, self.app.id))
+            self._app.data_incoming.append((data, self._app.id))
 
-    def configure_smpc(self, exponent: int = 8, shards: int = 0, operation: SMPCOperation = SMPCOperation.ADD, serialization: SMPCSerialization = SMPCSerialization.JSON):
+    def configure_smpc(self, exponent: int = 8, shards: int = 0, operation: SMPCOperation = SMPCOperation.ADD,
+                       serialization: SMPCSerialization = SMPCSerialization.JSON):
         """
         Configures successive usage of SMPC aggregation performed in the FeatureCloud controller.
 
@@ -413,12 +578,13 @@ class AppState(abc.ABC):
             serialization to be used for the data
         """
 
-        self.app.default_smpc['exponent'] = exponent
-        self.app.default_smpc['shards'] = shards
-        self.app.default_smpc['operation'] = operation.value
-        self.app.default_smpc['serialization'] = serialization.value
+        self._app.default_smpc['exponent'] = exponent
+        self._app.default_smpc['shards'] = shards
+        self._app.default_smpc['operation'] = operation.value
+        self._app.default_smpc['serialization'] = serialization.value
 
-    def update(self, message: Union[str, None] = None, progress: Union[float, None] = None, state: Union[State, None] = None):
+    def update(self, message: Union[str, None] = None, progress: Union[float, None] = None,
+               state: Union[State, None] = None):
         """
         Updates information about the execution.
 
@@ -433,14 +599,54 @@ class AppState(abc.ABC):
         """
 
         if message and len(message) > 40:
-            self.app.log('message is too long (max: 40)', level=LogLevel.FATAL)
+            self._app.log('message is too long (max: 40)', level=LogLevel.FATAL)
         if progress is not None and (progress < 0 or progress > 1):
-            self.app.log('progress must be between 0 and 1', level=LogLevel.FATAL)
+            self._app.log('progress must be between 0 and 1', level=LogLevel.FATAL)
         if state is not None and state != State.RUNNING and state != State.ERROR and state != State.ACTION:
-            self.app.log('invalid state', level=LogLevel.FATAL)
-        self.app.status_message = message
-        self.app.status_progress = progress
-        self.app.status_state = state.value if state else None
+            self._app.log('invalid state', level=LogLevel.FATAL)
+        self._app.status_message = message
+        self._app.status_progress = progress
+        self._app.status_state = state.value if state else None
+
+    def store(self, key: str, value):
+        """ Store allows to share data across different AppState instances.
+
+        Parameters
+        ----------
+        key: str
+        value:
+
+        """
+        self._app.internal[key] = value
+
+    def load(self, key: str):
+        """ Load allows to access data shared across different AppState instances.
+
+        Parameters
+        ----------
+        key: str
+
+        Returns
+        -------
+        value:
+            Value stored previously using store
+
+        """
+        return self._app.internal.get(key)
+
+    def log(self, msg, level: LogLevel = LogLevel.DEBUG):
+        """
+        Prints a log message or raises an exception according to the log level.
+
+        Parameters
+        ----------
+        msg : str
+            message to be displayed
+        level : LogLevel, default=LogLevel.DEBUG
+            determines the channel (stdout, stderr) or whether to trigger an exception
+        """
+
+        self._app.log(f'[State: {self.name}] {msg}')
 
 
 def app_state(name: str, role: Role = Role.BOTH, app_instance: Union[App, None] = None, **kwargs):

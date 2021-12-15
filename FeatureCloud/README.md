@@ -1,7 +1,4 @@
 # FeatureCloud
-<p align="center">
-<img src="https://featurecloud.ai/assets/fc_logo_small.svg" width="400" height="400"/>
-</p>
 
 [FeatureCloud](https://featurecloud.eu/) provides a privacy-preserving platform for federated learning and data analysis.
 Two major target groups who can benefit from FeatureCloud are researchers and developers. Any end-user who have data and 

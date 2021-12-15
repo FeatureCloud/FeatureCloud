@@ -51,11 +51,11 @@ class DieState(AppState):
     def run(self) -> str or None:
         self.update(progress=0.25)
         d = random.randint(1, 6)
-        self.app.log(f'threw a {d}')  # This is how we can log a message for debugging purposes
+        self.log(f'threw a {d}')  # This is how we can log a message for debugging purposes
         self.configure_smpc(exponent=6, operation=SMPCOperation.ADD)  # SMPC needs an exponent to transform numbers (here 6) into fixed-point values and an operation (either 'add' or 'multiply')
         self.send_data_to_coordinator(d, use_smpc=USE_SMPC)  # Here, we send data to the coordinator. `use_smpc` specifies whether we want to use SMPC
 
-        if self.app.coordinator:
+        if self.is_coordinator:
             return 'aggregate'
         else:
             return 'obtain'
@@ -92,6 +92,6 @@ class ObtainState(AppState):
     def run(self) -> str or None:
         self.update(progress=0.9)
         s = self.await_data()
-        self.app.log(f'sum is {s}')
+        self.log(f'sum is {s}')
         self.update(message=f'obtained sum {s}')
         return 'terminal'  # This means we are done. If the coordinator transitions into the 'terminal' state, the whole computation will be shut down
