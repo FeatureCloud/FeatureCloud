@@ -13,6 +13,8 @@ FeatureCloud/cli/README.md
 FeatureCloud/cli/requirements.txt
 FeatureCloud/cli/.gitignore
 FeatureCloud/venv/*
+FeatureCloud.egg-info
+FeatureCloud.egg-info/*
 FeatureCloud/venv
 build
 dist
