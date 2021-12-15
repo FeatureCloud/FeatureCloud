@@ -12,7 +12,8 @@ FeatureCloud/engine/README.md
 FeatureCloud/cli/README.md
 FeatureCloud/cli/requirements.txt
 FeatureCloud/cli/.gitignore
-
+FeatureCloud/venv/*
+FeatureCloud/venv
 build
 dist
 
