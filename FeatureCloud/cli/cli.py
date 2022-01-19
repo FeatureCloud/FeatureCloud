@@ -1,6 +1,6 @@
 import click
 from sys import exit
-from FeatureCloud.cli import api
+import api.controller
 import helper
 
 
@@ -74,17 +74,36 @@ def stop(controller_host: str, test_id: str or int):
 @click.option('--controller-host', default='http://localhost:8000',
               help='Address of your running controller instance.',
               required=True)
-@click.option('--test-id', help='The test id of the test to be stopped.')
-def delete(controller_host: str, test_id: str or int):
+@click.option('--test-id', help='The test id of the test to be deleted. '
+                                'To delete all tests omit this option and use "delete all".')
+@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
+def delete(controller_host: str, test_id: str or int, what: tuple):
     if not api.controller.is_online(controller_host):
         click.echo(f'No controller online on {controller_host}.')
         exit()
-    success, result = api.controller.delete_test(controller_host, test_id)
 
-    if not success:
-        click.echo(result['detail'])
+    if test_id is not None and len(what) == 0:
+        success, result = api.controller.delete_test(controller_host, test_id)
+
+        if not success:
+            click.echo(result['detail'])
+            exit()
+
+    elif test_id is None and len(what) > 0:
+        if what[0].lower() == 'all':
+            success, result = api.controller.delete_tests(controller_host)
+
+            if not success:
+                click.echo(result['detail'])
+                exit()
+        else:
+            click.echo(f'Unsupported argument {what[0]}')
+            exit()
+
+    else:
+        click.echo('Wrong combination of parameters. '
+                   'To delete a single test use option --test-id. To delete all tests use the "all" argument.')
         exit()
-
 
 @test.command('list')
 @click.option('--controller-host', default='http://localhost:8000',

@@ -63,6 +63,14 @@ def get_tests(url: str):
         return False, response.content
 
 
+def delete_tests(url: str):
+    response = http.delete(url=f'{url}/app/tests/')
+    if response.status_code == 200:
+        return True, response.content
+    else:
+        return False, response.content
+
+
 def get_test(url: str, test_id: str or int):
     response = http.get(url=f'{url}/app/test/{test_id}/')
 
