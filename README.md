@@ -18,7 +18,25 @@ that requires minimum developers' familiarity. The second class, state, is where
 insert their logic into states by assigning roles, adding, and taking transitions. 
 ## CLI
 FeatureCloud provides a CLI to flexibly interact with the FeatureCloud controller, responsible for securely connecting collaborating 
-clients in the FC platform. For more information about CLI, please visit our [cli](https://github.com/FeatureCloud/cli) repository. 
+clients in the FC platform.
+### fc-cli
+A CLI for FeatureCloud to run the FC testing environment directly via the command-line. 
+
+Usage: cli.py [OPTIONS] COMMAND [ARGS]...
+
+```
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  delete: Delete a single test run or all test runs
+  info: Get details about a single test run
+  list: List all test runs
+  logs: Get the logs of a single test runs
+  start: Start a single test run
+  stop: Stop a single test run
+  traffic: Show the traffic of a single test run
+```
 
 # INSTRUCTIONS FOR FEATURECLOUD DEVELOPERS
 This part of the readme is for the FC core team, do not upload it as a readme for the pip package.
