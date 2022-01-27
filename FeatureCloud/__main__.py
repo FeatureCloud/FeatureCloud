@@ -8,7 +8,6 @@ from FeatureCloud.cli import helper
 def test():
     pass
 
-
 @test.command('help')
 def help():
     print("For registering and testing your apps or using other apps, please visit "
@@ -208,7 +207,7 @@ def traffic(controller_host: str, test_id: str or int, format: str):
               help='Address of your running controller instance.',
               required=True)
 @click.option('--test-id', help='The test id of the test.', required=True)
-@click.option('--instance-id', help='The isntance id of the client.', required=True)
+@click.option('--instance-id', help='The instance id of the client.', required=True)
 @click.option('--from-param', help='From param', default='', required=True)
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
     if not controller.is_online(controller_host):
@@ -223,3 +222,20 @@ def logs(controller_host: str, test_id: str or int, instance_id: str or int, fro
     else:
         click.echo(result['detail'])
         exit()
+
+@click.group()
+def controller():
+    pass
+
+@controller.command('start')
+def start():
+    """Start the controller"""
+
+@controller.command('stop')
+def stop():
+    """Stop the controller"""
+
+fc_command = click.CommandCollection(sources=[test, controller])
+
+# if __name__ == '__main__':
+#     fc_command()

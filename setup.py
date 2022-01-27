@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(name="FeatureCloud",
-                 version="0.0.12",
+                 version="0.0.13",
                  author="FeatureCloud",
                  author_email="mohammad.bakhtiari@uni-hamburg.de",
                  description="Secure Federated Learning Platform",
@@ -22,8 +22,8 @@ setuptools.setup(name="FeatureCloud",
                            'FeatureCloud.cli',
                            'FeatureCloud.cli.api', 'FeatureCloud.cli.api.backend', 'FeatureCloud.cli.tests'],
                  python_requires=">=3.7",
-                 entry_points={'console_scripts': ['FeatureCloud = FeatureCloud.__main__:test',
-                                                   'featurecloud = FeatureCloud.__main__:test',
+                 entry_points={'console_scripts': ['FeatureCloud = FeatureCloud.__main__:fc_command',
+                                                   'featurecloud = FeatureCloud.__main__:fc_command',
                                                    'fc = FeatureCloud.__main__:fc_command',
 
                                                    ]
