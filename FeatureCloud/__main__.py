@@ -1,5 +1,6 @@
 import click
 from FeatureCloud.cli import cli
+from FeatureCloud.controller import controller_management
 
 @click.group("first-level")
 def fc_cli() -> None:
@@ -126,12 +127,31 @@ def controller()-> None:
     """Controller start/stop"""
 
 @controller.command()
-def start() -> None:
+@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
+@click.option('--port', default=8000, help='Controller port number.')
+@click.option('--data-dir', default='mnt/input', help='Controller data directory.')
+def start(what: tuple, port: int, data_dir: str) -> None:
     """Start controller"""
+    name = 'fc-controller'
+    if len(what) > 0:
+        name = what[0]
+    controller_management.start(name, port, data_dir)
 
 @controller.command()
-def stop() -> None:
-    """Stop controller"""
+@click.option('--tail', help='View the tails of controller logs.')
+@click.option('--log-level', default='info', help='Log level filter.')
+@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
+def logs() -> None:
+    """Display the logs for the controller instance"""
+
+@controller.command()
+@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
+def status() -> None:
+    """Display general status of the controller"""
+
+@controller.command()
+def ls() -> None:
+    """Lists all running controller instances"""
 
 if __name__ == "__main__":
     fc_cli()
