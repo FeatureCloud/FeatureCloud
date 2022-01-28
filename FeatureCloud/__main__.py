@@ -1,8 +1,9 @@
 import click
+from FeatureCloud.cli import cli
 
 @click.group("first-level")
 def cli() -> None:
-    """Top level"""
+    """FeatureCloud pip package"""
 
 @cli.group("test")
 def test() -> None:
@@ -10,13 +11,7 @@ def test() -> None:
 
 @test.command('help')
 def help():
-    print("For registering and testing your apps or using other apps, please visit "
-          "our "
-          "website: \n https://featurecloud.ai.\n And for more information about"
-          " FeatureCloud architecture: \n"
-          "The FeatureCloud AI Store for Federated Learning in Biomedicine and "
-          "Beyond\n "
-          "https://arxiv.org/abs/2105.05734 ")
+    cli.help()
 
 @test.command('start')
 @click.option('--controller-host', default='http://localhost:8000',
@@ -43,24 +38,7 @@ def help():
               default='')
 def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval,
           download_results: str):
-    if not controller.is_online(controller_host):
-        click.echo(f'No controller online on {controller_host}. Exiting.')
-        exit()
-
-    success, result = controller.start_test(controller_host,
-                                            app_image,
-                                            filter(None, client_dirs.split(',')),
-                                            generic_dir,
-                                            channel == 'local',
-                                            query_interval,
-                                            download_results)
-
-    if success:
-        click.echo(result['id'])
-        return result['id']
-    else:
-        click.echo(result)
-        exit()
+    cli.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval, download_results)
 
 
 @test.command('stop')
@@ -69,14 +47,7 @@ def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: s
               required=True)
 @click.option('--test-id', help='The test id of the test to be stopped.')
 def stop(controller_host: str, test_id: str or int):
-    if not controller.is_online(controller_host):
-        click.echo(f'No controller online on {controller_host}.')
-        exit()
-
-    success, result = controller.stop_test(controller_host, test_id)
-    if not success:
-        click.echo(result)
-        exit()
+    cli.stop(controller_host, test_id)
 
 
 @test.command('delete')
@@ -87,32 +58,7 @@ def stop(controller_host: str, test_id: str or int):
                                 'To delete all tests omit this option and use "delete all".')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
 def delete(controller_host: str, test_id: str or int, what: tuple):
-    if not controller.is_online(controller_host):
-        click.echo(f'No controller online on {controller_host}.')
-        exit()
-
-    if test_id is not None and len(what) == 0:
-        success, result = controller.delete_test(controller_host, test_id)
-
-        if not success:
-            click.echo(result['detail'])
-            exit()
-
-    elif test_id is None and len(what) > 0:
-        if what[0].lower() == 'all':
-            success, result = controller.delete_tests(controller_host)
-
-            if not success:
-                click.echo(result['detail'])
-                exit()
-        else:
-            click.echo(f'Unsupported argument {what[0]}')
-            exit()
-
-    else:
-        click.echo('Wrong combination of parameters. '
-                   'To delete a single test use option --test-id. To delete all tests use the "all" argument.')
-        exit()
+    cli.delete(controller_host, test_id, what)
 
 
 @test.command('list')
@@ -121,29 +67,7 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
               required=True)
 @click.option('--format', help='Format of the test list. json or dataframe', required=True, default='dataframe')
 def list(controller_host: str, format: str):
-    if not controller.is_online(controller_host):
-        click.echo(f'No controller online on {controller_host}. Exiting.')
-        exit()
-
-    success, result = controller.get_tests(controller_host)
-    if success:
-        if len(result) == 0:
-            click.echo('No tests available.')
-            exit()
-        if format == 'json':
-            click.echo(result)
-            return result
-        elif format == 'dataframe':
-            df = helper.json_to_dataframe(result).set_index('id')
-            click.echo(df.to_string())
-            return df
-        else:
-            click.echo(f'Format {format} not available. Returning json.')
-            click.echo(result)
-            return result
-    else:
-        click.echo(result)
-        exit()
+    cli.list(controller_host, format)
 
 
 @test.command('info')
@@ -153,25 +77,7 @@ def list(controller_host: str, format: str):
 @click.option('--test-id', help='Test id', required=True)
 @click.option('--format', help='Format of the test info. json or dataframe', required=True, default='dataframe')
 def info(controller_host: str, test_id: str or int, format: str):
-    if not controller.is_online(controller_host):
-        click.echo(f'No controller online on {controller_host}. Exiting.')
-        exit()
-
-    success, result = controller.get_test(controller_host, test_id)
-    if success:
-        if format == 'json':
-            click.echo(result)
-            return result
-        elif format == 'dataframe':
-            df = helper.json_to_dataframe(result, single_entry=True).set_index('id')
-            click.echo(df.to_string())
-            return df
-        else:
-            click.echo(f'Format {format} not available. Returning json.')
-            return result
-    else:
-        click.echo(result['detail'])
-        exit()
+    cli.info(controller_host, test_id, format)
 
 
 @test.command('traffic')
@@ -181,25 +87,7 @@ def info(controller_host: str, test_id: str or int, format: str):
 @click.option('--test-id', help='The test id of the test to be stopped.')
 @click.option('--format', help='Format of the test traffic. json or dataframe', required=True, default='dataframe')
 def traffic(controller_host: str, test_id: str or int, format: str):
-    if not controller.is_online(controller_host):
-        click.echo(f'No controller online on {controller_host}. Exiting.')
-        exit()
-
-    success, result = controller.get_traffic(controller_host, test_id)
-    if success:
-        if format == 'json':
-            click.echo(result)
-            return result
-        elif format == 'dataframe':
-            df = helper.json_to_dataframe(result)
-            click.echo(df.to_string())
-            return df
-        else:
-            click.echo(f'Format {format} not available. Returning json.')
-            return result
-    else:
-        click.echo(result['detail'])
-        exit()
+    cli.traffic(controller_host, test_id, format)
 
 
 @test.command('logs')
@@ -210,19 +98,28 @@ def traffic(controller_host: str, test_id: str or int, format: str):
 @click.option('--instance-id', help='The instance id of the client.', required=True)
 @click.option('--from-param', help='From param', default='', required=True)
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
-    if not controller.is_online(controller_host):
-        click.echo(f'No controller online on {controller_host}. Exiting.')
-        exit()
+    cli.logs(controller_host, test_id, instance_id, from_param)
 
-    success, result = controller.get_logs(controller_host, test_id, instance_id, from_param)
-    if success:
-        for line in result["logs"].split("\n"):
-            click.echo(line)
-        return result
-    else:
-        click.echo(result['detail'])
-        exit()
+@cli.group("workflow")
+def workflow() -> None:
+    """Workflow related commands"""
 
+@workflow.command('workflow')
+@click.option('--controller-host', default='http://localhost:8000',
+              help='Address of your running controller instance.',
+              required=True)
+@click.option('--wf-dir', default='.,.',
+              help='workflow path',
+              required=True)
+@click.option('--channel', default='local',
+              help='The communication channel to be used. Can be local or internet.',
+              required=True)
+@click.option('--query-interval', default=2,
+              help='The interval after how many seconds the status call will be performed.',
+              required=True)
+def workflow(controller_host: str, wf_dir: str, channel: str, query_interval):
+    # from
+    pass
 
 @cli.group("controller")
 def controller()-> None:
