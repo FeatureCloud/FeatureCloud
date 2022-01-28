@@ -22,9 +22,9 @@ setuptools.setup(name="FeatureCloud",
                            'FeatureCloud.cli',
                            'FeatureCloud.cli.api', 'FeatureCloud.cli.api.backend', 'FeatureCloud.cli.tests'],
                  python_requires=">=3.7",
-                 entry_points={'console_scripts': ['FeatureCloud = FeatureCloud.__main__:cli',
-                                                   'featurecloud = FeatureCloud.__main__:cli',
-                                                   'fc = FeatureCloud.__main__:cli',
+                 entry_points={'console_scripts': ['FeatureCloud = FeatureCloud.__main__:fc_cli',
+                                                   'featurecloud = FeatureCloud.__main__:fc_cli',
+                                                   'fc = FeatureCloud.__main__:fc_cli',
 
                                                    ]
                                },

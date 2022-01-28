@@ -2,10 +2,10 @@ import click
 from FeatureCloud.cli import cli
 
 @click.group("first-level")
-def cli() -> None:
+def fc_cli() -> None:
     """FeatureCloud pip package"""
 
-@cli.group("test")
+@fc_cli.group("test")
 def test() -> None:
     """Testbed related commands"""
 
@@ -100,7 +100,7 @@ def traffic(controller_host: str, test_id: str or int, format: str):
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
     cli.logs(controller_host, test_id, instance_id, from_param)
 
-@cli.group("workflow")
+@fc_cli.group("workflow")
 def workflow() -> None:
     """Workflow related commands"""
 
@@ -121,7 +121,7 @@ def workflow(controller_host: str, wf_dir: str, channel: str, query_interval):
     # from
     pass
 
-@cli.group("controller")
+@fc_cli.group("controller")
 def controller()-> None:
     """Controller start/stop"""
 
@@ -134,4 +134,4 @@ def stop() -> None:
     """Stop controller"""
 
 if __name__ == "__main__":
-    cli()
+    fc_cli()
