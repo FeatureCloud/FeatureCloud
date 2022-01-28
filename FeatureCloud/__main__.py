@@ -12,6 +12,24 @@ def help():
     cli.help()
 
 
+@test.command('workflow')
+@click.option('--controller-host', default='http://localhost:8000',
+              help='Address of your running controller instance.',
+              required=True)
+@click.option('--wf-dir', default='.,.',
+              help='workflow path',
+              required=True)
+@click.option('--channel', default='local',
+              help='The communication channel to be used. Can be local or internet.',
+              required=True)
+@click.option('--query-interval', default=2,
+              help='The interval after how many seconds the status call will be performed.',
+              required=True)
+def workflow(controller_host: str, wf_dir: str, channel: str, query_interval):
+    # from
+    pass
+
+
 @test.command('start')
 @click.option('--controller-host', default='http://localhost:8000',
               help='Address of your running controller instance.',
@@ -59,6 +77,7 @@ def stop(controller_host: str, test_id: str or int):
 def delete(controller_host: str, test_id: str or int, what: tuple):
     cli.delete(controller_host, test_id, what)
 
+
 @test.command('list')
 @click.option('--controller-host', default='http://localhost:8000',
               help='Address of your running controller instance.',
@@ -78,7 +97,6 @@ def info(controller_host: str, test_id: str or int, format: str):
     cli.info(controller_host, test_id, format)
 
 
-
 @test.command('traffic')
 @click.option('--controller-host', default='http://localhost:8000',
               help='Address of your running controller instance.',
@@ -88,6 +106,7 @@ def info(controller_host: str, test_id: str or int, format: str):
 def traffic(controller_host: str, test_id: str or int, format: str):
     cli.traffic(controller_host, test_id, format)
 
+
 @test.command('logs')
 @click.option('--controller-host', default='http://localhost:8000',
               help='Address of your running controller instance.',
@@ -96,4 +115,4 @@ def traffic(controller_host: str, test_id: str or int, format: str):
 @click.option('--instance-id', help='The isntance id of the client.', required=True)
 @click.option('--from-param', help='From param', default='', required=True)
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
-    logs(controller_host, test_id, instance_id, from_param)
+    cli.logs(controller_host, test_id, instance_id, from_param)
