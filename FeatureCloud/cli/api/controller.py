@@ -1,7 +1,7 @@
 import requests
 from urllib.parse import urlencode
 
-from helper import http
+from FeatureCloud.cli.helper import http
 
 
 def is_online(url: str = 'http://localhost:8000/'):
