@@ -1,12 +1,12 @@
 import click
-from sys import exit
-from FeatureCloud.cli.api import controller
-from FeatureCloud.cli import helper
 
+@click.group("first-level")
+def cli() -> None:
+    """Top level"""
 
-@click.group()
-def test():
-    pass
+@cli.group("test")
+def test() -> None:
+    """Testbed related commands"""
 
 @test.command('help')
 def help():
@@ -223,19 +223,18 @@ def logs(controller_host: str, test_id: str or int, instance_id: str or int, fro
         click.echo(result['detail'])
         exit()
 
-@click.group()
-def controller():
-    pass
 
-@controller.command('start')
-def start():
-    """Start the controller"""
+@cli.group("controller")
+def controller()-> None:
+    """Controller start/stop"""
 
-@controller.command('stop')
-def stop():
-    """Stop the controller"""
+@controller.command()
+def start() -> None:
+    """Start controller"""
 
-fc_command = click.CommandCollection(sources=[test, controller])
+@controller.command()
+def stop() -> None:
+    """Stop controller"""
 
-# if __name__ == '__main__':
-#     fc_command()
+if __name__ == "__main__":
+    cli()
