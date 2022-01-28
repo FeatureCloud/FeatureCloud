@@ -1,34 +1,17 @@
 import click
 from FeatureCloud.cli import cli
 
+@click.group("first-level")
+def fc_cli() -> None:
+    """FeatureCloud pip package"""
 
-@click.group()
-def test():
-    pass
-
+@fc_cli.group("test")
+def test() -> None:
+    """Testbed related commands"""
 
 @test.command('help')
 def help():
     cli.help()
-
-
-@test.command('workflow')
-@click.option('--controller-host', default='http://localhost:8000',
-              help='Address of your running controller instance.',
-              required=True)
-@click.option('--wf-dir', default='.,.',
-              help='workflow path',
-              required=True)
-@click.option('--channel', default='local',
-              help='The communication channel to be used. Can be local or internet.',
-              required=True)
-@click.option('--query-interval', default=2,
-              help='The interval after how many seconds the status call will be performed.',
-              required=True)
-def workflow(controller_host: str, wf_dir: str, channel: str, query_interval):
-    # from
-    pass
-
 
 @test.command('start')
 @click.option('--controller-host', default='http://localhost:8000',
@@ -112,7 +95,43 @@ def traffic(controller_host: str, test_id: str or int, format: str):
               help='Address of your running controller instance.',
               required=True)
 @click.option('--test-id', help='The test id of the test.', required=True)
-@click.option('--instance-id', help='The isntance id of the client.', required=True)
+@click.option('--instance-id', help='The instance id of the client.', required=True)
 @click.option('--from-param', help='From param', default='', required=True)
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
     cli.logs(controller_host, test_id, instance_id, from_param)
+
+@fc_cli.group("workflow")
+def workflow() -> None:
+    """Workflow related commands"""
+
+@workflow.command('workflow')
+@click.option('--controller-host', default='http://localhost:8000',
+              help='Address of your running controller instance.',
+              required=True)
+@click.option('--wf-dir', default='.,.',
+              help='workflow path',
+              required=True)
+@click.option('--channel', default='local',
+              help='The communication channel to be used. Can be local or internet.',
+              required=True)
+@click.option('--query-interval', default=2,
+              help='The interval after how many seconds the status call will be performed.',
+              required=True)
+def workflow(controller_host: str, wf_dir: str, channel: str, query_interval):
+    # from
+    pass
+
+@fc_cli.group("controller")
+def controller()-> None:
+    """Controller start/stop"""
+
+@controller.command()
+def start() -> None:
+    """Start controller"""
+
+@controller.command()
+def stop() -> None:
+    """Stop controller"""
+
+if __name__ == "__main__":
+    fc_cli()
