@@ -1,19 +1,27 @@
 import click
-from FeatureCloud.cli.api import controller
+import subprocess
 from sys import exit
 
-def check_controller_prerequisites():
-    return True
+def check_docker_status():
+    """Checks whether all docker-related components have been installed."""
+    try:
+        subprocess.check_output(['docker', '--version'])
+    except OSError:
+        click.echo("Docker daemon is not available")
+        exit()
 
-def start(name: str, porfeatt: int, data_dir: str):
-    pass
-    # success, result = controller.start_controller_instance(name, port, data_dir)
-    #
-    # if success:
-    #     click.echo("Controller instance started")
-    # else:
-    #     click.echo(result)
-    #     exit()
+def check_controller_prerequisites():
+    check_docker_status()
+
+def start(name: str, port: int, data_dir: str):
+    check_controller_prerequisites()
+    success, result = controller.start_controller_instance(name, port, data_dir)
+
+    if success:
+        click.echo("Controller instance started")
+    else:
+        click.echo(result)
+        exit()
 
 
 def stop(name: str):
