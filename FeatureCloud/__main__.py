@@ -137,6 +137,11 @@ def start(what: tuple, port: int, data_dir: str) -> None:
         name = what[0]
     controller_management.start(name, port, data_dir)
 
+@controller.command('stop')
+@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
+def stop() -> None:
+    """Stop controller instance"""
+
 @controller.command('logs')
 @click.option('--tail', help='View the tails of controller logs.')
 @click.option('--log-level', default='info', help='Log level filter.')
