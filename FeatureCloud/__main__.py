@@ -126,7 +126,7 @@ def workflow(controller_host: str, wf_dir: str, channel: str, query_interval):
 def controller()-> None:
     """Controller start/stop"""
 
-@controller.command()
+@controller.command('start')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
 @click.option('--port', default=8000, help='Controller port number.')
 @click.option('--data-dir', default='mnt/input', help='Controller data directory.')
@@ -137,19 +137,19 @@ def start(what: tuple, port: int, data_dir: str) -> None:
         name = what[0]
     controller_management.start(name, port, data_dir)
 
-@controller.command()
+@controller.command('logs')
 @click.option('--tail', help='View the tails of controller logs.')
 @click.option('--log-level', default='info', help='Log level filter.')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
 def logs() -> None:
     """Display the logs for the controller instance"""
 
-@controller.command()
+@controller.command('status')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
 def status() -> None:
     """Display general status of the controller"""
 
-@controller.command()
+@controller.command('ls')
 def ls() -> None:
     """Lists all running controller instances"""
 
