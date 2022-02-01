@@ -128,8 +128,8 @@ def controller()-> None:
 
 @controller.command('start')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
-@click.option('--port', default=8000, help='Controller port number.')
-@click.option('--data-dir', default='mnt/input', help='Controller data directory.')
+@click.option('--port', default=8000, help='Controller port number.', required=False)
+@click.option('--data-dir', default='data', help='Controller data directory.', required=False)
 def start(what: tuple, port: int, data_dir: str) -> None:
     """Start controller"""
     name = 'fc-controller'
