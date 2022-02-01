@@ -93,7 +93,13 @@ def status(name: str):
     pass
 
 def ls():
-    pass
+    check_controller_prerequisites()
+    client = docker.from_env()
+    for container in client.containers.list(filters={"label": [CONTROLLER_LABEL]}):
+        click.echo("Controller ID: " + container.id)
+        click.echo("Controller name: " + container.name)
+        click.echo("Controller status: " + container.status)
+        click.echo("======================================")
 
 def download(url: str, dest_folder: str):
     if not os.path.exists(dest_folder):

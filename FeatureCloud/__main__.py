@@ -161,6 +161,7 @@ def status() -> None:
 @controller.command('ls')
 def ls() -> None:
     """Lists all running controller instances"""
+    controller_management.ls()
 
 if __name__ == "__main__":
     fc_cli()
