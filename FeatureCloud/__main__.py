@@ -132,15 +132,19 @@ def controller()-> None:
 @click.option('--data-dir', default='data', help='Controller data directory.', required=False)
 def start(what: tuple, port: int, data_dir: str) -> None:
     """Start controller"""
-    name = 'fc-controller'
+    name = controller_management.DEFAULT_CONTROLLER_NAME
     if len(what) > 0:
         name = what[0]
     controller_management.start(name, port, data_dir)
 
 @controller.command('stop')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
-def stop() -> None:
+def stop(what: tuple) -> None:
     """Stop controller instance"""
+    name = controller_management.DEFAULT_CONTROLLER_NAME
+    if len(what) > 0:
+        name = what[0]
+    controller_management.stop(name)
 
 @controller.command('logs')
 @click.option('--tail', help='View the tails of controller logs.')

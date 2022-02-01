@@ -49,9 +49,11 @@ def start(name: str, port: int, data_dir: str):
 
     # Run start script
     if os.name == 'nt':
-        subprocess.call([r'./FeatureCloud/controller/start_controller.bat'])
+        p = subprocess.Popen(start_script_path, shell=True, stdout=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        click.echo(p.returncode)
     else:
-        subprocess.call(['sh', './FeatureCloud/controller/start_controller.sh'])
+        subprocess.call(['sh', start_script_path])
 
 def stop(name: str):
     check_controller_prerequisites()
@@ -62,7 +64,7 @@ def stop(name: str):
 
     # Removing controllers filtered by name
     for container in client.containers.list(filters={"name": [name]}):
-        click.echo("Removing controller with label" + CONTROLLER_LABEL + " and name " + container.name)
+        click.echo("Removing controller with name " + container.name)
         client.api.remove_container(container.id, v=True, force=True)
 
 def stop_all_controllers(name: str):
