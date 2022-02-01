@@ -1,13 +1,12 @@
-import os
-
 import click
 import docker
+import os
+import requests
 import subprocess
 from sys import exit
 
-import requests
-from docker.types import Mount
-
+START_SCRIPT_DIR = "./tmp"
+START_SCRIPT_NAME = "start_controller"
 CONTROLLER_IMAGE = "featurecloud.ai/controller"
 CONTROLLER_LABEL = "fc-controller-label"
 DEFAULT_PORT = 8000
@@ -34,15 +33,19 @@ def start(name: str, port: int, data_dir: str):
     except OSError as error:
         pass
 
+    # Prune fc controllers
+    stop_all_controllers(name)
+
     if os.name == 'nt':
-        script_extension = 'bat'
+        start_script_extension = '.bat'
     else:
-        script_extension = 'sh'
+        start_script_extension = '.sh'
 
     # Download start script from server
-    download("https://featurecloud.ai/assets/scripts/start_controller." + script_extension, "./FeatureCloud/controller")
+    download("https://featurecloud.ai/assets/scripts/start_controller" + start_script_extension, START_SCRIPT_DIR)
 
-    replace_options_in_start_script(name, port, data_dir)
+    start_script_path = os.path.join(START_SCRIPT_DIR, START_SCRIPT_NAME + start_script_extension)
+    replace_options_in_start_script(start_script_path, name, port, data_dir)
 
     # Run start script
     if os.name == 'nt':
@@ -52,11 +55,34 @@ def start(name: str, port: int, data_dir: str):
 
 def stop(name: str):
     check_controller_prerequisites()
-
     client = docker.from_env()
-    for container in client.containers.list():
-        if container.image == CONTROLLER_IMAGE:
-            client.api.remove_container(container, v=True, force=True)
+
+    if len(name) == 0:
+        name = DEFAULT_CONTROLLER_NAME
+
+    # Removing controllers filtered by name
+    for container in client.containers.list(filters={"name": [name]}):
+        click.echo("Removing controller with label" + CONTROLLER_LABEL + " and name " + container.name)
+        client.api.remove_container(container.id, v=True, force=True)
+
+def stop_all_controllers(name: str):
+    check_controller_prerequisites()
+    client = docker.from_env()
+
+    if len(name) == 0:
+        name = DEFAULT_CONTROLLER_NAME
+
+    client.containers.prune(filters={"label": [CONTROLLER_LABEL]})
+
+    # Removing controllers filtered by name
+    for container in client.containers.list(filters={"name": [name]}):
+        click.echo("Removing controller with label " + CONTROLLER_LABEL + " and name " + container.name)
+        client.api.remove_container(container.id, v=True, force=True)
+
+    # Removing controllers filtered by label
+    for container in client.containers.list(filters={"label": [CONTROLLER_LABEL]}):
+        click.echo("Removing controller with label" + CONTROLLER_LABEL + " and name " + container.name)
+        client.api.remove_container(container.id, v=True, force=True)
 
 def logs(name: str, tail: bool, log_level: str):
     pass
@@ -76,7 +102,7 @@ def download(url: str, dest_folder: str):
 
     r = requests.get(url, stream=True)
     if r.ok:
-        print("saving to", os.path.abspath(file_path))
+        print("Saving start script to ", os.path.abspath(file_path))
         with open(file_path, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024 * 8):
                 if chunk:
@@ -86,12 +112,32 @@ def download(url: str, dest_folder: str):
     else:  # HTTP status code 4XX/5XX
         print("Download failed: status code {}\n{}".format(r.status_code, r.text))
 
-def replace_options_in_start_script(name: str, port: int, data_dir: str):
+def replace_options_in_start_script(start_script_path: str, name: str, port: int, data_dir: str):
+    # Read in the file
+    with open(start_script_path, 'r') as file:
+        start_script = file.read()
+
     if name != DEFAULT_CONTROLLER_NAME:
-        pass
+        click.echo("Changing default controller name to " + name)
+        # For Windows
+        start_script = start_script.replace("controllerName=" + DEFAULT_CONTROLLER_NAME, "controllerName=" + name)
+        # For MacOS/Linux
+        start_script = start_script.replace("--name " + DEFAULT_CONTROLLER_NAME, "--name " + name)
+        start_script = start_script.replace("--controller-name=" + DEFAULT_CONTROLLER_NAME, "--controller-name=" + name)
 
     if port != DEFAULT_PORT:
-        pass
+        click.echo("Changing default port to " + str(port))
+        start_script = start_script.replace(str(DEFAULT_PORT) + ":", str(port) + ":")
 
     if data_dir != DEFAULT_DATA_DIR:
-        pass
+        click.echo("Changing default data dir to " + data_dir)
+        start_script = start_script.replace(DEFAULT_DATA_DIR, data_dir)
+
+    # Configure label
+    start_script = start_script.replace('docker run ', 'docker run -l ' + CONTROLLER_LABEL + " ")
+
+    click.echo("Final start script:")
+    click.echo(start_script)
+    # Write the file out again
+    with open(start_script_path, 'w') as file:
+        file.write(start_script)
