@@ -34,7 +34,7 @@ def start(name: str, port: int, data_dir: str):
         pass
 
     # Prune fc controllers
-    stop_all_controllers(name)
+    prune_controllers(name)
 
     if os.name == 'nt':
         start_script_extension = '.bat'
@@ -67,7 +67,7 @@ def stop(name: str):
         click.echo("Removing controller with name " + container.name)
         client.api.remove_container(container.id, v=True, force=True)
 
-def stop_all_controllers(name: str):
+def prune_controllers(name: str):
     check_controller_prerequisites()
     client = docker.from_env()
 
@@ -76,21 +76,12 @@ def stop_all_controllers(name: str):
 
     client.containers.prune(filters={"label": [CONTROLLER_LABEL]})
 
-    # Removing controllers filtered by name
-    for container in client.containers.list(filters={"name": [name]}):
-        click.echo("Removing controller with label " + CONTROLLER_LABEL + " and name " + container.name)
-        client.api.remove_container(container.id, v=True, force=True)
-
-    # Removing controllers filtered by label
-    for container in client.containers.list(filters={"label": [CONTROLLER_LABEL]}):
-        click.echo("Removing controller with label" + CONTROLLER_LABEL + " and name " + container.name)
-        client.api.remove_container(container.id, v=True, force=True)
-
 def logs(name: str, tail: bool, log_level: str):
     pass
 
 def status(name: str):
-    pass
+    check_controller_prerequisites()
+    click.echo(subprocess.check_output(['docker', 'ps', '--filter', 'name=' + name]))
 
 def ls():
     check_controller_prerequisites()

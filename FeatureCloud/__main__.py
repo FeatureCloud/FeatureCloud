@@ -155,8 +155,12 @@ def logs() -> None:
 
 @controller.command('status')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
-def status() -> None:
+def status(what: tuple) -> None:
     """Display general status of the controller"""
+    name = controller_management.DEFAULT_CONTROLLER_NAME
+    if len(what) > 0:
+        name = what[0]
+    controller_management.status(name)
 
 @controller.command('ls')
 def ls() -> None:
