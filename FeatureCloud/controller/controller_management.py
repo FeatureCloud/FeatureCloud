@@ -128,9 +128,9 @@ def replace_options_in_start_script(start_script_path: str, name: str, port: int
         start_script = start_script.replace(DEFAULT_DATA_DIR, data_dir)
 
     # Configure label
-    start_script = start_script.replace('docker run ', 'docker run -l ' + CONTROLLER_LABEL + " ")
+    start_script = start_script.replace('docker run ', "docker run --label=['" + CONTROLLER_LABEL + "'] ")
 
-    click.echo("Final start script:")
+    click.echo("Start script:")
     click.echo(start_script)
     # Write the file out again
     with open(start_script_path, 'w') as file:
