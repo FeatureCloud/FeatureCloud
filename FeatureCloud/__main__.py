@@ -147,10 +147,10 @@ def stop(what: tuple) -> None:
     controller_management.stop(name)
 
 @controller.command('logs')
-@click.option('--tail', help='View the tail of controller logs.')
+@click.option('--tail', help='View the tail of controller logs.', default=False, required=False)
 @click.option('--log-level', default='debug', help='Log level filter.')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
-def logs(what: tuple, log_level: str, tail: str) -> None:
+def logs(what: tuple, log_level: str, tail: bool) -> None:
     """Display the logs for the controller instance"""
     name = controller_management.DEFAULT_CONTROLLER_NAME
     if len(what) > 0:

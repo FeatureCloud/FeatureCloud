@@ -5,10 +5,11 @@ import requests
 import subprocess
 from sys import exit
 
+START_SCRIPT_LOCATION = "./FeatureCloud/controller/start_scripts"
 START_SCRIPT_DIR = "./tmp"
 START_SCRIPT_NAME = "start_controller"
 CONTROLLER_IMAGE = "featurecloud.ai/controller"
-CONTROLLER_LABEL = "fc-controller-label"
+CONTROLLER_LABEL = "FCControllerLabel"
 DEFAULT_PORT = 8000
 DEFAULT_CONTROLLER_NAME = 'fc-controller'
 DEFAULT_DATA_DIR = 'data'
@@ -41,11 +42,8 @@ def start(name: str, port: int, data_dir: str):
     else:
         start_script_extension = '.sh'
 
-    # Download start script from server
-    download("https://featurecloud.ai/assets/scripts/start_controller" + start_script_extension, START_SCRIPT_DIR)
-
+    replace_options_in_start_script(start_script_extension, name, port, data_dir)
     start_script_path = os.path.join(START_SCRIPT_DIR, START_SCRIPT_NAME + start_script_extension)
-    replace_options_in_start_script(start_script_path, name, port, data_dir)
 
     # Run start script
     if os.name == 'nt':
@@ -77,7 +75,23 @@ def prune_controllers(name: str):
     client.containers.prune(filters={"label": [CONTROLLER_LABEL]})
 
 def logs(name: str, tail: bool, log_level: str):
-    pass
+    if tail is True:
+        click.echo(subprocess.check_output(['docker', 'container', 'logs', '--tail=20', '--follow', name]))
+    else:
+        log_level_choices = ['debug', 'info', 'warn', 'error', 'fatal']
+        log_level_index = log_level_choices.index(log_level)
+        logs_content = subprocess.check_output(['docker', 'container', 'logs', name])
+        click.echo(logs_content)
+        # logs_content_array = logs_content.splitlines(keepends=False)
+        # for line in logs_content_array:
+        #     # line = line.decode('UTF-8')
+        #     i = 0
+        #     while i < log_level_index:
+        #         current_log_level = log_level_choices[i]
+        #         if line.find("level=" + current_log_level) > -1:
+        #             logs_content.remove()
+        #         i += 1
+        # click.echo(logs_content_array)
 
 def status(name: str):
     check_controller_prerequisites()
@@ -87,26 +101,9 @@ def ls():
     check_controller_prerequisites()
     click.echo(subprocess.check_output(['docker', 'ps', '--filter', 'label=' + CONTROLLER_LABEL]))
 
-def download(url: str, dest_folder: str):
-    if not os.path.exists(dest_folder):
-        os.makedirs(dest_folder)  # create folder if it does not exist
+def replace_options_in_start_script(start_script_extension: str, name: str, port: int, data_dir: str):
+    start_script_path = os.path.join(START_SCRIPT_LOCATION, START_SCRIPT_NAME + start_script_extension)
 
-    filename = url.split('/')[-1].replace(" ", "_")  # be careful with file names
-    file_path = os.path.join(dest_folder, filename)
-
-    r = requests.get(url, stream=True)
-    if r.ok:
-        print("Saving start script to ", os.path.abspath(file_path))
-        with open(file_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024 * 8):
-                if chunk:
-                    f.write(chunk)
-                    f.flush()
-                    os.fsync(f.fileno())
-    else:  # HTTP status code 4XX/5XX
-        print("Download failed: status code {}\n{}".format(r.status_code, r.text))
-
-def replace_options_in_start_script(start_script_path: str, name: str, port: int, data_dir: str):
     # Read in the file
     with open(start_script_path, 'r') as file:
         start_script = file.read()
@@ -127,11 +124,9 @@ def replace_options_in_start_script(start_script_path: str, name: str, port: int
         click.echo("Changing default data dir to " + data_dir)
         start_script = start_script.replace(DEFAULT_DATA_DIR, data_dir)
 
-    # Configure label
-    start_script = start_script.replace('docker run ', "docker run --label=['" + CONTROLLER_LABEL + "'] ")
-
     click.echo("Start script:")
     click.echo(start_script)
+    start_script_path = os.path.join(START_SCRIPT_DIR, START_SCRIPT_NAME + start_script_extension)
     # Write the file out again
     with open(start_script_path, 'w') as file:
         file.write(start_script)
