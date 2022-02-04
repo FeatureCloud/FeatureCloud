@@ -42,8 +42,7 @@ def start(name: str, port: int, data_dir: str):
     else:
         start_script_extension = '.sh'
 
-    replace_options_in_start_script(start_script_extension, name, port, data_dir)
-    start_script_path = os.path.join(START_SCRIPT_DIR, START_SCRIPT_NAME + start_script_extension)
+    start_script_path = prepare_start_script(start_script_extension, name, port, data_dir)
 
     # Run start script
     if os.name == 'nt':
@@ -101,7 +100,7 @@ def ls():
     check_controller_prerequisites()
     click.echo(subprocess.check_output(['docker', 'ps', '--filter', 'label=' + CONTROLLER_LABEL]))
 
-def replace_options_in_start_script(start_script_extension: str, name: str, port: int, data_dir: str):
+def prepare_start_script(start_script_extension: str, name: str, port: int, data_dir: str):
     start_script_path = os.path.join(START_SCRIPT_LOCATION, START_SCRIPT_NAME + start_script_extension)
 
     # Read in the file
@@ -130,3 +129,5 @@ def replace_options_in_start_script(start_script_extension: str, name: str, port
     # Write the file out again
     with open(start_script_path, 'w') as file:
         file.write(start_script)
+
+    return start_script_path
