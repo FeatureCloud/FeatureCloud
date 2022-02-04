@@ -74,23 +74,20 @@ def prune_controllers(name: str):
     client.containers.prune(filters={"label": [CONTROLLER_LABEL]})
 
 def logs(name: str, tail: bool, log_level: str):
-    if tail is True:
-        click.echo(subprocess.check_output(['docker', 'container', 'logs', '--tail=20', '--follow', name]))
-    else:
-        log_level_choices = ['debug', 'info', 'warn', 'error', 'fatal']
-        log_level_index = log_level_choices.index(log_level)
-        logs_content = subprocess.check_output(['docker', 'container', 'logs', name])
-        click.echo(logs_content)
-        # logs_content_array = logs_content.splitlines(keepends=False)
-        # for line in logs_content_array:
-        #     # line = line.decode('UTF-8')
-        #     i = 0
-        #     while i < log_level_index:
-        #         current_log_level = log_level_choices[i]
-        #         if line.find("level=" + current_log_level) > -1:
-        #             logs_content.remove()
-        #         i += 1
-        # click.echo(logs_content_array)
+    # get controller address
+    check_controller_prerequisites()
+    client = docker.from_env()
+    try:
+        container = client.containers.get(name)
+        host_port = container.attrs['NetworkSettings']['Ports']['8000/tcp'][0]['HostPort']
+    except docker.errors.NotFound:
+        click.echo("Container not found")
+
+    # Get logs content from controller
+    params = {'from': 0}
+    r = requests.get("http://localhost:" + host_port + "/logs/?from=0")
+    click.echo(r.text)
+
 
 def status(name: str):
     check_controller_prerequisites()
