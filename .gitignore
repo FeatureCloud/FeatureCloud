@@ -21,3 +21,5 @@ dist
 
 .idea
 *.pyc
+/venv/
+/data/

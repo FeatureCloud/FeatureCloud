@@ -20,7 +20,8 @@ setuptools.setup(name="FeatureCloud",
                  ],
                  packages=['FeatureCloud', 'FeatureCloud.apps', 'FeatureCloud.engine', 'FeatureCloud.api',
                            'FeatureCloud.cli',
-                           'FeatureCloud.cli.api', 'FeatureCloud.cli.api.backend', 'FeatureCloud.cli.tests'],
+                           'FeatureCloud.cli.api', 'FeatureCloud.cli.api.backend', 'FeatureCloud.cli.tests',
+                           'FeatureCloud.controller'],
                  python_requires=">=3.7",
                  entry_points={'console_scripts': ['FeatureCloud = FeatureCloud.__main__:fc_cli',
                                                    'featurecloud = FeatureCloud.__main__:fc_cli',
@@ -29,7 +30,7 @@ setuptools.setup(name="FeatureCloud",
                                                    ]
                                },
                  install_requires=['bottle', 'jsonpickle', 'joblib', 'numpy', 'pydot', 'pyyaml', 'flake8~=3.9.2',
-                                'pycodestyle~=2.7.0', 'Click~=8.0.1', 'requests', 'urllib3~=1.26.6', 'pandas',
-                                   'pyinstaller']
+                                   'pycodestyle~=2.7.0', 'Click~=8.0.1', 'requests', 'urllib3~=1.26.6', 'pandas',
+                                   'pyinstaller', 'docker']
 
                  )
