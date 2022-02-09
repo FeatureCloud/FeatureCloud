@@ -4,12 +4,13 @@ import time
 import click
 import docker
 import os
+import tempfile
 import requests
 import subprocess
 from sys import exit
 
 START_SCRIPT_LOCATION = "./FeatureCloud/controller/start_scripts"
-START_SCRIPT_DIR = "./tmp"
+START_SCRIPT_DIR = "FeatureCloud"
 START_SCRIPT_NAME = "start_controller"
 CONTROLLER_IMAGE = "featurecloud.ai/controller"
 CONTROLLER_LABEL = "FCControllerLabel"
@@ -149,9 +150,11 @@ def prepare_start_script(start_script_extension: str, name: str, port: int, data
         click.echo("Changing default data dir to " + data_dir)
         start_script = start_script.replace(DEFAULT_DATA_DIR, data_dir)
 
-    click.echo("Start script:")
-    click.echo(start_script)
-    start_script_path = os.path.join(START_SCRIPT_DIR, START_SCRIPT_NAME + start_script_extension)
+    start_script_dir = os.path.join(tempfile.gettempdir(), START_SCRIPT_DIR)
+    if not os.path.exists(start_script_dir):
+        os.makedirs(start_script_dir)
+    start_script_path = os.path.join(start_script_dir, START_SCRIPT_NAME + start_script_extension)
+
     # Write the file out again
     with open(start_script_path, 'w') as file:
         file.write(start_script)
