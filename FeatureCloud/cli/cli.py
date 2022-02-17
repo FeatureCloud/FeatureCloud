@@ -76,7 +76,7 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
         exit()
 
 
-def list(controller_host: str, format: str):
+def list_tests(controller_host: str, format: str):
     if not controller.is_online(controller_host):
         click.echo(f'No controller online on {controller_host}. Exiting.')
         exit()

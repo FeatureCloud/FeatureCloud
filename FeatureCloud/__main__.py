@@ -4,6 +4,7 @@ from FeatureCloud.controller import controller_management
 import sys
 import importlib
 
+
 @click.group("first-level")
 def fc_cli() -> None:
     """FeatureCloud pip package"""
@@ -73,7 +74,7 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
               required=True)
 @click.option('--format', help='Format of the test list. json or dataframe', required=True, default='dataframe')
 def list_tests(controller_host: str, format: str):
-    cli.list(controller_host, format)
+    cli.list_tests(controller_host, format)
 
 
 @test.command('info')

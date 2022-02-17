@@ -70,7 +70,7 @@ def stop(name: str):
         name = DEFAULT_CONTROLLER_NAME
 
     # Removing controllers filtered by name
-    for container in client.containers.list(filters={"name": [name]}):
+    for container in client.containers.list_tests(filters={"name": [name]}):
         click.echo("Removing controller with name " + container.name)
         client.api.remove_container(container.id, v=True, force=True)
 
