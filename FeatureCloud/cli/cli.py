@@ -103,7 +103,7 @@ def list_tests(controller_host: str, format: str):
         exit()
 
 
-def info(controller_host: str, test_id: str or int, format: str):
+def info(controller_host: str, test_id: str or int, format: str, echo: bool = True):
     if not controller.is_online(controller_host):
         click.echo(f'No controller online on {controller_host}. Exiting.')
         exit()
@@ -111,14 +111,17 @@ def info(controller_host: str, test_id: str or int, format: str):
     success, result = controller.get_test(controller_host, test_id)
     if success:
         if format == 'json':
-            click.echo(result)
+            if echo:
+                click.echo(result)
             return result
         elif format == 'dataframe':
             df = helper.json_to_dataframe(result, single_entry=True).set_index('id')
-            click.echo(df.to_string())
+            if echo:
+                click.echo(df.to_string())
             return df
         else:
-            click.echo(f'Format {format} not available. Returning json.')
+            if echo:
+                click.echo(f'Format {format} not available. Returning json.')
             return result
     else:
         click.echo(result['detail'])
@@ -174,5 +177,5 @@ class Controller:
         self.list = partial(list_tests, controller_host=controller_host)
         self.traffic = partial(traffic, controller_host=controller_host)
         self.logs = partial(logs, controller_host=controller_host)
-        self.info = partial(info, controller_host=controller_host)
+        self.info = partial(info, controller_host=controller_host, echo=False)
 
