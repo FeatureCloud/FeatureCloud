@@ -1,7 +1,8 @@
 import click
 from FeatureCloud.cli import cli
 from FeatureCloud.controller import controller_management
-
+import sys
+import importlib
 
 @click.group("first-level")
 def fc_cli() -> None:
@@ -111,22 +112,30 @@ def workflow() -> None:
     """Workflow related commands"""
 
 
-@workflow.command('workflow')
-@click.option('--controller-host', default='http://localhost:8000',
+@workflow.command('start')
+@click.option('--controller-hosts', default='http://localhost:8000,',
               help='Address of your running controller instance.',
               required=True)
-@click.option('--wf-dir', default='.,.',
-              help='workflow path',
+@click.option('--wf-dir', default='/home/mohammad/PycharmProjects/FeatureCloud/Workflow',
+              help='full workflow file path',
               required=True)
-@click.option('--channel', default='local',
+@click.option('--wf-file', default='example_wf',
+              help='.py file name',
+              required=True)
+@click.option('--channels', default='local,',
               help='The communication channel to be used. Can be local or internet.',
               required=True)
-@click.option('--query-interval', default=2,
+@click.option('--query-intervals', default='1,',
               help='The interval after how many seconds the status call will be performed.',
               required=True)
-def workflow(controller_host: str, wf_dir: str, channel: str, query_interval):
-    # from
-    pass
+def start_workflow(controller_hosts: str, wf_dir: str, wf_file: str, channels: str, query_intervals: str):
+    sys.path.append(wf_dir)
+    workflow_class = importlib.import_module(wf_file)
+    wf = workflow_class.WorkFlow(controller_hosts=list(filter(None, controller_hosts.split(','))),
+                                 channels=list(filter(None, channels.split(','))),
+                                 query_intervals=list(filter(None, query_intervals.split(','))))
+    wf.register_apps()
+    wf.run()
 
 
 @fc_cli.group("controller")
