@@ -2,6 +2,7 @@ import click
 from sys import exit
 from FeatureCloud.cli.api import controller
 from FeatureCloud.cli import helper
+from functools import partial
 
 
 def help():
@@ -159,3 +160,19 @@ def logs(controller_host: str, test_id: str or int, instance_id: str or int, fro
     else:
         click.echo(result['detail'])
         exit()
+
+
+class Controller:
+    def __init__(self, controller_host: str, channel: str, query_interval):
+        print(controller_host)
+        self.controller_host = controller_host
+        self.channel = channel
+        self.query_interval = query_interval
+        self.start = partial(start, controller_host=controller_host, channel=channel, query_interval=query_interval)
+        self.stop = partial(stop, controller_host=controller_host)
+        self.delete = partial(delete, controller_host=controller_host)
+        self.list = partial(list_tests, controller_host=controller_host)
+        self.traffic = partial(traffic, controller_host=controller_host)
+        self.logs = partial(logs, controller_host=controller_host)
+        self.info = partial(info, controller_host=controller_host)
+
