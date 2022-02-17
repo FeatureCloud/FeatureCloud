@@ -2,17 +2,21 @@ import click
 from FeatureCloud.cli import cli
 from FeatureCloud.controller import controller_management
 
+
 @click.group("first-level")
 def fc_cli() -> None:
     """FeatureCloud pip package"""
+
 
 @fc_cli.group("test")
 def test() -> None:
     """Testbed related commands"""
 
+
 @test.command('help')
 def help():
     cli.help()
+
 
 @test.command('start')
 @click.option('--controller-host', default='http://localhost:8000',
@@ -67,7 +71,7 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
               help='Address of your running controller instance.',
               required=True)
 @click.option('--format', help='Format of the test list. json or dataframe', required=True, default='dataframe')
-def list(controller_host: str, format: str):
+def list_tests(controller_host: str, format: str):
     cli.list(controller_host, format)
 
 
@@ -101,9 +105,11 @@ def traffic(controller_host: str, test_id: str or int, format: str):
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
     cli.logs(controller_host, test_id, instance_id, from_param)
 
+
 @fc_cli.group("workflow")
 def workflow() -> None:
     """Workflow related commands"""
+
 
 @workflow.command('workflow')
 @click.option('--controller-host', default='http://localhost:8000',
@@ -122,9 +128,11 @@ def workflow(controller_host: str, wf_dir: str, channel: str, query_interval):
     # from
     pass
 
+
 @fc_cli.group("controller")
-def controller()-> None:
+def controller() -> None:
     """Controller start/stop"""
+
 
 @controller.command('start')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
@@ -137,6 +145,7 @@ def start(what: tuple, port: int, data_dir: str) -> None:
         name = what[0]
     controller_management.start(name, port, data_dir)
 
+
 @controller.command('stop')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
 def stop(what: tuple) -> None:
@@ -145,6 +154,7 @@ def stop(what: tuple) -> None:
     if len(what) > 0:
         name = what[0]
     controller_management.stop(name)
+
 
 @controller.command('logs')
 @click.option('--tail', help='View the tail of controller logs.', default=False, required=False)
@@ -170,10 +180,12 @@ def status(what: tuple) -> None:
         name = what[0]
     controller_management.status(name)
 
+
 @controller.command('ls')
 def ls() -> None:
     """Lists all running controller instances"""
     controller_management.ls()
+
 
 if __name__ == "__main__":
     fc_cli()
