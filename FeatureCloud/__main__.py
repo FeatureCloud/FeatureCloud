@@ -1,6 +1,5 @@
 import click
 from FeatureCloud.cli import cli
-from FeatureCloud.controller import controller_management
 from FeatureCloud.test.commands import test
 from FeatureCloud.workflow.commands import workflow
 from FeatureCloud.controller.commands import controller
