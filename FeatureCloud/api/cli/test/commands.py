@@ -1,4 +1,5 @@
 import click
+from FeatureCloud.api.utils.cli import cli
 
 @click.group("test")
 def test() -> None:

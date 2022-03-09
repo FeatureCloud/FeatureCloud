@@ -1,6 +1,6 @@
 from bottle import Bottle
 
-from FeatureCloud.engine.app import app
+from FeatureCloud.app.engine.app import app
 
 web_server = Bottle()
 

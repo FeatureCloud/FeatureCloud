@@ -2,7 +2,7 @@ from distutils import dir_util
 
 import yaml
 
-from engine.app import AppState
+from app import AppState
 
 
 class BlankState(AppState):

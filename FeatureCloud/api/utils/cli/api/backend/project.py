@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from api.backend.auth import create_authorization_header
-from helper import http
+from FeatureCloud.api.utils.cli.api.backend.auth import create_authorization_header
+from FeatureCloud.api.utils.cli.helper import http
 
 home = str(Path.home())
 url = 'http://127.0.0.1:7000'

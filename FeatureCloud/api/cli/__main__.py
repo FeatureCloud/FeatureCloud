@@ -1,8 +1,7 @@
 import click
-from FeatureCloud.cli import cli
-from FeatureCloud.test.commands import test
-from FeatureCloud.workflow.commands import workflow
-from FeatureCloud.controller.commands import controller
+from FeatureCloud.api.cli.test.commands import test
+from FeatureCloud.api.cli.workflow.commands import workflow
+from FeatureCloud.api.cli.controller.commands import controller
 
 @click.group('first-level')
 def fc_cli() -> None:

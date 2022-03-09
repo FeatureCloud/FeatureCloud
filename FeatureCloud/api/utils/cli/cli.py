@@ -1,7 +1,7 @@
 import click
 from sys import exit
-from FeatureCloud.cli.api import controller
-from FeatureCloud.cli import helper
+from FeatureCloud.api.utils.cli.api import controller
+from FeatureCloud.api.utils.cli import helper
 
 
 def help():

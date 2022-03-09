@@ -1,5 +1,5 @@
 import click
-from FeatureCloud.controller import controller_management
+from FeatureCloud.api.utils.controller import controller_management
 
 @click.group("controller")
 def controller()-> None:

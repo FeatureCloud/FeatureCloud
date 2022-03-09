@@ -1,4 +1,3 @@
-
 import click
 
 @click.group("workflow")
