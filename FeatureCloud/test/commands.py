@@ -94,3 +94,7 @@ def traffic(controller_host: str, test_id: str or int, format: str):
 @click.option('--from-param', help='From param', default='', required=True)
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
     cli.logs(controller_host, test_id, instance_id, from_param)
+
+if __name__ == "__main__":
+    test()
+
