@@ -22,8 +22,6 @@ setuptools.setup(name="FeatureCloud",
                  python_requires=">=3.7",
                  entry_points={'console_scripts': ['FeatureCloud = FeatureCloud.api.cli.__main__:fc_cli',
                                                    'featurecloud = FeatureCloud.api.cli.__main__:fc_cli',
-                                                   'fc = FeatureCloud.api.cli.__main__:fc_cli',
-
                                                    ]
                                },
                  install_requires=['bottle', 'jsonpickle', 'joblib', 'numpy', 'pydot', 'pyyaml', 'flake8~=3.9.2',
