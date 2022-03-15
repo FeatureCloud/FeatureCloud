@@ -7,7 +7,8 @@ def test() -> None:
 
 @test.command('help')
 def help():
-    test.help()
+    _, msg = commands.help()
+    click.echo(msg)
 
 @test.command('start')
 @click.option('--controller-host', default='http://localhost:8000',

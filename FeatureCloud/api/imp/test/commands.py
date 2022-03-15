@@ -1,16 +1,16 @@
 from sys import exit
-from FeatureCloud.api.utils.cli.api import controller
-from FeatureCloud.api.utils.cli import helper
+from FeatureCloud.api.imp.test.api import controller
+from FeatureCloud.api.imp.test import helper
 
 
 def help():
-    print("For registering and testing your apps or using other apps, please visit "
-          "our "
-          "website: \n https://featurecloud.ai.\n And for more information about"
-          " FeatureCloud architecture: \n"
-          "The FeatureCloud AI Store for Federated Learning in Biomedicine and "
-          "Beyond\n "
-          "https://arxiv.org/abs/2105.05734 ")
+    return (None, """For registering and testing your apps or using other apps, please visit 
+          our 
+          website: \n https://featurecloud.ai.\n And for more information about
+           FeatureCloud architecture: \n
+          The FeatureCloud AI Store for Federated Learning in Biomedicine and 
+          Beyond\n 
+          https://arxiv.org/abs/2105.05734 """)
 
 
 def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval,
@@ -66,8 +66,7 @@ def stop(controller_host: str, test_id: str or int):
             return (None, msg)
 
     else:
-        msg = 'Wrong combination of parameters. '
-                   'To delete a single test use option --test-id. To delete all tests use the "all" argument.'
+        msg = 'Wrong combination of parameters. To delete a single test use option --test-id. To delete all tests use the "all" argument.'
         return (None, msg)
 
 
