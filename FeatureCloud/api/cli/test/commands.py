@@ -1,5 +1,5 @@
 import click
-from FeatureCloud.api.utils.cli import cli
+from FeatureCloud.api.utils.test import commands
 
 @click.group("test")
 def test() -> None:
@@ -7,7 +7,7 @@ def test() -> None:
 
 @test.command('help')
 def help():
-    cli.help()
+    test.help()
 
 @test.command('start')
 @click.option('--controller-host', default='http://localhost:8000',
@@ -34,7 +34,8 @@ def help():
               default='')
 def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval,
           download_results: str):
-    cli.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval, download_results)
+    _, msg = commands.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval, download_results)
+    click.echo(msg)
 
 
 @test.command('stop')
@@ -43,7 +44,8 @@ def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: s
               required=True)
 @click.option('--test-id', help='The test id of the test to be stopped.')
 def stop(controller_host: str, test_id: str or int):
-    cli.stop(controller_host, test_id)
+    _, msg = commands.stop(controller_host, test_id)
+    click.echo(msg)
 
 
 @test.command('delete')
@@ -54,7 +56,8 @@ def stop(controller_host: str, test_id: str or int):
                                 'To delete all tests omit this option and use "delete all".')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
 def delete(controller_host: str, test_id: str or int, what: tuple):
-    cli.delete(controller_host, test_id, what)
+    _, msg = commands.delete(controller_host, test_id, what)
+    click.echo(msg)
 
 
 @test.command('list')
@@ -63,7 +66,8 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
               required=True)
 @click.option('--format', help='Format of the test list. json or dataframe', required=True, default='dataframe')
 def list(controller_host: str, format: str):
-    cli.list(controller_host, format)
+    _, msg = commands.list(controller_host, format)
+    click.echo(msg)
 
 
 @test.command('info')
@@ -73,7 +77,8 @@ def list(controller_host: str, format: str):
 @click.option('--test-id', help='Test id', required=True)
 @click.option('--format', help='Format of the test info. json or dataframe', required=True, default='dataframe')
 def info(controller_host: str, test_id: str or int, format: str):
-    cli.info(controller_host, test_id, format)
+    _, msg = commands.info(controller_host, test_id, format)
+    click.echo(msg)
 
 
 @test.command('traffic')
@@ -83,7 +88,8 @@ def info(controller_host: str, test_id: str or int, format: str):
 @click.option('--test-id', help='The test id of the test to be stopped.')
 @click.option('--format', help='Format of the test traffic. json or dataframe', required=True, default='dataframe')
 def traffic(controller_host: str, test_id: str or int, format: str):
-    cli.traffic(controller_host, test_id, format)
+    _, msg = commands.traffic(controller_host, test_id, format)
+    click.echo(msg)
 
 
 @test.command('logs')
@@ -94,7 +100,8 @@ def traffic(controller_host: str, test_id: str or int, format: str):
 @click.option('--instance-id', help='The instance id of the client.', required=True)
 @click.option('--from-param', help='From param', default='', required=True)
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
-    cli.logs(controller_host, test_id, instance_id, from_param)
+    _, msg = commands.logs(controller_host, test_id, instance_id, from_param)
+    click.echo(msg)
 
 if __name__ == "__main__":
     test()
