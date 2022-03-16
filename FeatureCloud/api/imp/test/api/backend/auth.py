@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from helper import http
+from FeatureCloud.api.utils.cli.helper import http
 
 home = str(Path.home())
 url = 'http://127.0.0.1:7000'

@@ -9,7 +9,7 @@ import requests
 import subprocess
 from sys import exit
 
-START_SCRIPT_LOCATION = "./FeatureCloud/controller/start_scripts"
+START_SCRIPT_LOCATION = "./FeatureCloud/api/imp/controller/start_scripts"
 START_SCRIPT_DIR = "FeatureCloud"
 START_SCRIPT_NAME = "start_controller"
 CONTROLLER_IMAGE = "featurecloud.ai/controller"

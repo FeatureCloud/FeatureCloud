@@ -3,7 +3,7 @@ import time
 
 from bottle import Bottle, request
 
-from FeatureCloud.engine.app import app
+from FeatureCloud.app.engine.app import app
 
 api_server = Bottle()
 
