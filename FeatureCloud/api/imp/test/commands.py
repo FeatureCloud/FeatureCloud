@@ -44,6 +44,9 @@ def stop(controller_host: str, test_id: str or int):
     if not success:
         msg = result
         return (None, msg)
+
+def delete(controller_host: str, test_id: str or int, what: tuple):
+    if not controller.is_online(controller_host):
         msg = f'No controller online on {controller_host}.'
         return (None, msg)
 
