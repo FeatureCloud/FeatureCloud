@@ -57,6 +57,8 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
             msg = result['detail']
             return (None, msg)
 
+        return (None, result)
+
     elif test_id is None and len(what) > 0:
         if what[0].lower() == 'all':
             success, result = controller.delete_tests(controller_host)
