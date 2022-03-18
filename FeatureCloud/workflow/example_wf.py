@@ -1,5 +1,5 @@
-from workflow import TestWorkFlow
-from app import TestApp
+from FeatureCloud.workflow.workflow import TestWorkFlow
+from FeatureCloud.workflow.app import TestApp
 from time import sleep
 from functools import partial
 

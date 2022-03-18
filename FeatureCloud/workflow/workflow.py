@@ -1,5 +1,5 @@
 import abc
-from controller import Controller
+from FeatureCloud.workflow.controller import Controller
 
 
 class TestWorkFlow(abc.ABC):

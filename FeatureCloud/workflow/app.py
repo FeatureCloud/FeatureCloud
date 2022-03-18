@@ -2,7 +2,7 @@ import os.path
 from os import listdir
 import zipfile
 from time import sleep
-from controller import Controller
+from FeatureCloud.workflow.controller import Controller
 from functools import partial
 import shutil
 from distutils.dir_util import copy_tree
