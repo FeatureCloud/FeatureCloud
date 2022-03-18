@@ -8,8 +8,7 @@ def app() -> None:
 @app.command('new')
 @click.argument('name', type=click.Path(), nargs=1)
 @click.argument('directory', type=click.Path(), nargs=1, required=False)
-@click.option('template-name', help='You can specify other template')
+@click.option('--template-name', help='You can specify other template')
 def new(name: click.Path, directory: click.Path, template_name: str):
-    if directory and template_name:
-    _, msg = commands.new()
+    _, msg = commands.new(**{k: v for k , v in locals().items() if v})
     click.echo(msg)
