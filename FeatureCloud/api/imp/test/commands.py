@@ -150,7 +150,8 @@ def logs(controller_host: str, test_id: str or int, instance_id: str or int, fro
 
     success, result = controller.get_logs(controller_host, test_id, instance_id, from_param)
     if success:
-        for line in result["logs"].split("\n"):
+        msg = ""
+        for line in result["logs"]:
             msg += '\n' + line
         return (result, msg)
     else:
