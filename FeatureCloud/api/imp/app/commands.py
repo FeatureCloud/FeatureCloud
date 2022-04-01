@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 
 def create_link(template_name: str) -> str:
-    TEMPLATE_URL = 'https://github.com/FeatureCloud/app-blank.git'
+    TEMPLATE_URL = 'https://github.com/FeatureCloud/'
     return urljoin(TEMPLATE_URL, template_name+'.git')
 
 def new(name: str, directory: str = '.', template_name: str = 'app-blank') -> str:
