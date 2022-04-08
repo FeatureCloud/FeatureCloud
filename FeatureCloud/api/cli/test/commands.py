@@ -1,14 +1,21 @@
 import click
 from FeatureCloud.api.imp.test import commands
+from FeatureCloud.api.cli.test.workflow.commands import workflow
+
 
 @click.group("test")
 def test() -> None:
     """Testbed related commands"""
 
+
+test.add_command(workflow)
+
+
 @test.command('help')
 def help():
     _, msg = commands.help()
     click.echo(msg)
+
 
 @test.command('start')
 @click.option('--controller-host', default='http://localhost:8000',
@@ -35,7 +42,8 @@ def help():
               default='')
 def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval,
           download_results: str):
-    _, msg = commands.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval, download_results)
+    _, msg = commands.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval,
+                            download_results)
     click.echo(msg)
 
 
@@ -104,6 +112,6 @@ def logs(controller_host: str, test_id: str or int, instance_id: str or int, fro
     _, msg = commands.logs(controller_host, test_id, instance_id, from_param)
     click.echo(msg)
 
+
 if __name__ == "__main__":
     test()
-
