@@ -1,3 +1,4 @@
+
 import json
 import time
 
@@ -21,11 +22,15 @@ LOG_FETCH_INTERVAL = 3  # seconds
 LOG_LEVEL_CHOICES = ['debug', 'info', 'warn', 'error', 'fatal']
 
 
+def get_docker_client():
+    return docker.from_env()
+
 def check_docker_status():
     """Checks whether all docker-related components have been installed."""
+    client = get_docker_client()
     try:
-        subprocess.check_output(['docker', '--version'])
-    except OSError:
+        click.echo(client.version)
+    except docker.errors.APIError:
         click.echo("Docker daemon is not available")
         exit()
 
@@ -35,6 +40,7 @@ def check_controller_prerequisites():
 
 
 def start(name: str, port: int, data_dir: str):
+    client = get_docker_client()
     check_controller_prerequisites()
 
     # Create data dir if needed
@@ -46,25 +52,23 @@ def start(name: str, port: int, data_dir: str):
     # Prune fc controllers
     prune_controllers(name)
 
-    if os.name == 'nt':
-        start_script_extension = '.bat'
-    else:
-        start_script_extension = '.sh'
-
-    start_script_path = prepare_start_script(start_script_extension, name, port, data_dir)
-
     # Run start script
-    if os.name == 'nt':
-        p = subprocess.Popen(start_script_path, shell=True, stdout=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        click.echo(p.returncode)
-    else:
-        subprocess.call(['sh', start_script_path])
-
+    pull_proc = client.api.pull(repository='featurecloud.ai/controller', stream=True)
+    for p in pull_proc:
+        print(p)
+    client.containers.run(
+            CONTROLLER_IMAGE,
+            detach=True,
+            name= name if name else DEFAULT_CONTROLLER_NAME,
+            ports={8000:port if port else DEFAULT_PORT},
+            volumes=[f'{os.getcwd()}/data:/data', '/var/run/docker.sock:/var/run/docker.sock'],
+            labels=[CONTROLLER_LABEL],
+            command = f"--host-root={os.getcwd()}/data --internal-root=/data --controller-name=fc-controller"
+            )
 
 def stop(name: str):
     check_controller_prerequisites()
-    client = docker.from_env()
+    client = get_docker_client()
 
     if len(name) == 0:
         name = DEFAULT_CONTROLLER_NAME
@@ -77,9 +81,9 @@ def stop(name: str):
 
 def prune_controllers(name: str):
     check_controller_prerequisites()
-    client = docker.from_env()
+    client = get_docker_client()
 
-    if len(name) == 0:
+    if not name:
         name = DEFAULT_CONTROLLER_NAME
 
     client.containers.prune(filters={"label": [CONTROLLER_LABEL]})
@@ -88,7 +92,7 @@ def prune_controllers(name: str):
 def logs(name: str, tail: bool, log_level: str):
     # get controller address
     check_controller_prerequisites()
-    client = docker.from_env()
+    client = get_docker_client()
     host_port = 0
     try:
         container = client.containers.get(name)
@@ -114,8 +118,9 @@ def logs(name: str, tail: bool, log_level: str):
 
 
 def status(name: str):
+    client = get_docker_client()
     check_controller_prerequisites()
-    click.echo(subprocess.check_output(['docker', 'ps', '--filter', 'name=' + name]))
+    click.echo(client.containers.get(name))
 
 
 def ls():
