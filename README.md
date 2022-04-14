@@ -12,61 +12,77 @@ Using [FeatureCloud engine](https://github.com/FeatureCloud/app-template/tree/ma
 please refer to 
 [The FeatureCloud AI Store for Federated Learning in Biomedicine and Beyond](https://arxiv.org/abs/2105.05734) [[1]](#1).
 
-## FeatureCloud Engine
+## api
+FC api includes the necessary implementation to creat an app, run and manage the controller. It also includes the CLI to 
+support commandline management of controller.
+### cli
+A CLI for FeatureCloud to run the FC testing environment directly via the command-line.
+#### controller
+Commands to run or stop the FC controller:
+* logs: Display the logs for the controller instance
+  * tail: View the tail of controller logs.
+  * log-level: Log level filter.
+* ls: Lists all running controller instances
+* start: Start controller
+  * port: Controller port number. 
+  * data-dir: Controller data directory.
+* status: Display general status of the controller
+* stop: Stop controller instance
+#### app
+Basic commands to interact with FC controller regarding the creating apps and
+* new: to create a new app in a specific directory
+  * template-name:  URL of a specific sample app provided on FC GitHub repositories 
+* build(coming soon): to build docker image  
+* publish(coming soon): to push the docker image to the FC docker repository(FC AI-store)
+
+#### test 
+Commands to manage app(or test workflow of apps) execution:
+* delete: Delete a single test run or all test runs
+  * controller-host: Address of your running controller instance.[required]
+  * test-id The test id of the test to be deleted. To delete all tests omit this option and use "delete all".
+* info: Get details about a single test run
+  * controller-host: Address of your running controller instance.[required]
+  * test-id The test id of the test to be deleted. To delete all tests omit this option and use "delete all".
+  * format: Format of the test info. json or dataframe [required]
+* list: List all test runs
+  * controller-host: Address of your running controller instance.[required]
+  * format: Format of the test info. json or dataframe [required]
+* logs: Get the logs of a single test runs
+  * controller-host: Address of your running controller instance.[required]
+  * test-id The test id of the test to be deleted. To delete all tests omit this option and use "delete all".
+  * instance-id: The instance id of the client.  [required]
+  * format: Format of the test info. json or dataframe [required]
+* start: Start a single test run
+  * controller-host: Address of your running controller instance.[required]
+  * client-dirs: Client directories seperated by comma.  [required]
+  * generic-dir: Generic directory available for all clients.Content will be copied to the input folder of all instances.  [required]
+  * app-image: The repository url of the app image.  [required]
+  * channel: The communication channel to be used. Can be local or internet.  [required]
+  * query-interval INTEGER  The interval after how many seconds the status call will be performed.  [required]
+  * download-results TEXT   A directory name where to download results. This will be created into /data/tests directory
+* stop: Stop a single test run
+  * controller-host: Address of your running controller instance. [required]
+  * test-id: The test id of the test to be stopped.
+* traffic: Show the traffic of a single test run
+  * controller-host: Address of your running controller instance.[required]
+  * test-id: The test id of the test to be stopped.
+  * format: Format of the test traffic. json or dataframe[required]
+* workflow: Subcommands to manage running a test workflow
+  * controller-host: Address of your running controller instance.[required]
+  * wf-dir: path to directory containing the workflow[required]
+  * wf-file: python file including the workflow  [required]
+  * channel: The communication channel to be used. Can be local or internet.  [required]
+  * query-interval: The interval(in seconds) after how many seconds the status call will be performed.  [required]
+### imp
+HTTP request commands to interact with the FC controller.
+## app
 The engine package in FeatureCloud introduces two major elements of app development: app and state. App class is responsible for registering states and transitions between them, verifying the app logic, and executing them. The app is a highly transparent component 
 that requires minimum developers' familiarity. The second class, state, is where local computations carry on. Developers should 
-insert their logic into states by assigning roles, adding, and taking transitions. 
-## CLI
-FeatureCloud provides a CLI to flexibly interact with the FeatureCloud controller, responsible for securely connecting collaborating 
-clients in the FC platform.
-### fc-cli
-A CLI for FeatureCloud to run the FC testing environment directly via the command-line. 
-
-Usage: cli.py [OPTIONS] COMMAND [ARGS]...
-
-```
-Options:
-  --help  Show this message and exit.
-
-Commands:
-  delete: Delete a single test run or all test runs
-  info: Get details about a single test run
-  list: List all test runs
-  logs: Get the logs of a single test runs
-  start: Start a single test run
-  stop: Stop a single test run
-  traffic: Show the traffic of a single test run
-```
-
-# INSTRUCTIONS FOR FEATURECLOUD DEVELOPERS
-This part of the readme is for the FC core team, do not upload it as a readme for the pip package.
-## [setup.py](/setup.py)
-All the packages should be listed in the packages.
-Only two entrypoints are defined, `featurecloud` and `FeatureCloud`, which are connected 
-to [fc_command](/FeatureCloud/__main__.py').
-
-The version number can be manually set in the setup.py file.
-
-## Updating the pip package
-For updating the pip package you need an account in [https://pypi.org/](https://pypi.org/). For testing the pip package,
-it better to creat an account in [https://test.pypi.org/](https://test.pypi.org/) and upload the repo there.
-For updating the repo, your account should be added to the list of owners.
-For creating the package you should install `setuptools` and for uploading the package you should install `twine`, 
-which asks for your username and password. 
-### steps
-1. Call this:
-```python setup.py sdist```
-2. then in the dist folder there will be a FeatureCloud-....tar.gz file. Install it using:
-```pip install dist/FeatureCloud...tar.gz```
-3. Then it should work. You can test it by calling ```featurecloud --help``` which gives a list supported commands
-
-NOTICE: If you are installing the same version, do not forget to uninstall it first!
-
-4. To upload it to pypi test:
-```twine upload --repository testpypi dist/FeatureCloud-....tar.gz```
-
-5. For uploading it to pypi:
-```twine upload dist/FeatureCloud-....tar.gz```
+insert their logic into states by assigning roles, adding, and taking transitions. For more information please refer to our 
+[app-template](https://github.com/FeatureCloud/app-template) repository.
+## workflow
+Implementing flexible non-linear workflows in FeatureCloud platform. For more information, please refer to our 
+[Wrokflow](https://github.com/FeatureCloud/Workflow) repository.
 
 
 ### References
