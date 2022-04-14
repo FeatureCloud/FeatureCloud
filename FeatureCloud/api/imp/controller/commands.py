@@ -122,7 +122,8 @@ def status(name: str):
 
 def ls():
     check_controller_prerequisites()
-    click.echo(subprocess.check_output(['docker', 'ps', '--filter', 'label=' + CONTROLLER_LABEL]))
+    client = get_docker_client()
+    click.echo(client.containers.list(filters={'label': [CONTROLLER_LABEL]}))
 
 
 def prepare_logs(logs_json, log_level):
