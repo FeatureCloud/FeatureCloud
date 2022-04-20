@@ -169,7 +169,7 @@ The name of the extended class should always be `WorkFlow` and it asks for the c
 After implementing the workflow, developers can run it using FeatureCloud pip package:
 
 ```angular2html
-sudo featurecloud workflow start --wf-dir <WORKFLOW_FILE_Path> --wf-file <NAME> --controller-host <CONTROLLER> --channel <> --query-interval <>
+sudo featurecloud test workflow start --wf-dir <WORKFLOW_FILE_Path> --wf-file <NAME> --controller-host <CONTROLLER> --channel <> --query-interval <>
 ```
 
 Beware that due to the file permissions, the workflow should be run using supper-user access.

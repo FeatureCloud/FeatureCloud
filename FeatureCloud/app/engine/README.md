@@ -35,6 +35,7 @@ FeatureCloud app developers can use these constants for defining roles for state
 Once states are executing, any exceptions or errors can happen that can be handled automatically by the app.
 For reporting the situation for the front-end app, so end-users be aware of it, currently, three key values can be communicated to the controller:
 
+
 Operational states | 'running' | 'error' | 'action_required' 
 --- | --- | --- | --- |
 Constants | RUNNING | ERROR | ACTION | 
@@ -62,7 +63,7 @@ SMPC component is part of FeatureCloud Controller, and we encourage developers t
 to provide the controller with proper SMPC configuration. For more information about the SMPc module, please visit [FeatureCloud.ai](https://featurecloud.ai/)
 or refer to our [paper](https://arxiv.org/abs/2105.05734) [[1]](#1).
 
-```angular2html
+```python
 class SMPCType(TypedDict):
     operation: Literal['add', 'multiply']
     serialization: Literal['json']
@@ -91,7 +92,7 @@ For employing noise to the clients' data, we can use different operations. Curre
 two of the most common operations to make noisy data: add and multiply. App-developers can choose between 
 these two options, by providing the string value of `add` or `multiply`, or simply to avoid typos, they can 
 use following constants:
-```angular2html
+```python
 OPERATION_ADD = 'add'
 OPERATION_MULTIPLY = 'multiply'
 ```
@@ -156,12 +157,13 @@ will be accordingly and automatically handled by app instance.
 
 #### Desired configuration of SMPC component: `app.status_smpc`
 App developers can decide which parameters should be used SMPC aggregation, and they can inform the controller about the 
-aconfiguraion using [`app.configure_smpc`](#configuring-smpc-module-configure_smpc).
+configuration using [`app.configure_smpc`](#configuring-smpc-module-configure_smpc).
 
-### Shared memory for states: `app.internal`
+### Shared memory for states: `_app.internal`
 Different states can be defined and registered to the app, and they may need to pass data to each other. To support a shared memory
-between different states, `App` class has `internal` attribute, which is a dictionary that can be accessed through 
-`self.app.iternal` in each state.
+between different states, the `App` class has an `internal` attribute, a dictionary that can be accessed through 
+`self._app.iternal` in each state. However, the `app` instance is a private attribute for `AppState` and should not be accessed
+directly. Thereby, `load` and `store` methods are introduced to the `AppState` class to cover sharing data among different states.
 
 ### Registration methods
 The FeatureCloud app includes various methods that not only provides 
@@ -255,10 +257,34 @@ to have structural data consistency, it considers SMPC usage as follows:
 
 Accordingly, FeatureCloud app developers no longer are required to consider SMPC usage because they always get the same
 aggregated results in the coordinator. Provided aggregated results are not the average ones; therefore, they need to be averaged, if it's apt to, separately.
+If different data parts being sent by clients, using `aggregate_data` maybe troublesome because those data parts may vary in dimension and 
+data type. Hence, in such scenarios, developers can use `gather_data` to have access to the same data part of different clients 
+and pass them to `_aggregate` method separately to get the aggregated values.
 
 #### Gathering clients data: `gather_data`
 FC app developers are allowed to call this method only for clients with the coordinator role.
-This method calls the `await_data` method to wait for receiving data of all clients.            
+This method calls the `await_data` method to wait for receiving data of all clients. 
+The gathered data will be in a list which includes the data of each client. In case there be more than data part shared by
+each client, one solution to access related data is looping over the clients data and access the relative data part on different clients.
+For instance, for two clients A and B:
+A sends out:
+```python
+data_to_send = [[1, 2, 3], "test_A"]
+```
+
+while client B sends:
+
+```python
+data_to_send = [[5, 6], "test_B"]
+```
+
+the coordinator can aggregate the data as follows:
+```python
+clients_lists, clients_str = [], []
+for clients_data in self.gather_data():
+    clients_lists.append(clients_data[0])
+    clients_str.append(clients_data[1])
+```
 
 #### Waiting to receive data: `await_data`
 For receiving data from `n` clients, it can be called. It polls for data arrival every `DATA_POLL_INTERVAL` seconds, 
@@ -280,6 +306,29 @@ to employ SMPC for securing the aggregation or not by setting `use_smpc` flag.
 
 #### Broadcasting data: `broadcast_data`
 This should only be called for the coordinator to broadcasts data to all clients.
+
+### Shared memory methods
+Even though all states will be run in the same container and inherited from the same class, they need to have shared memory
+so developers can quickly transfer some local data from one state to another. These data can be either fixed, e.g., 
+information about clients' id, or dynamic, results of computations applied on the local data. Either way, the data is 
+located inside the unique `app` instance, which is a private member, and there are predefined methods and properties in 
+`AppState` to handle it.
+#### Sharing data with other states: `store`
+Once developers want to transfer data from one state to another, they can call the `store` method and provide `key` argument,
+to assign a name to the data part, and `value` argument for the data. `store` updates the shared memory by adding `key` to hold
+'value'. Beware that if `key` exists, it will be overridden by `store`. There is no restriction on `value`.
+#### Retrieving shared data from other states: `load`
+Once developers want to access specific shared data on the shared memory, all they need is the corresponding `key` and 
+calling `load` method to search the shared memory for it and return the value if it exists. If no `key` is found,
+app execution will be interrupted.
+#### Checking the role of app: `coordinator`
+In many scenarios, developers may condition their decisions on the role of the target app instance. For example, some transitions 
+may be exclusive to the coordinator and should be taken only on the app instance with the coordinator role. Accordingly, the coordinator 
+property in `AppSatate` will check the role and return `True` if the app instance role is coordinator; otherwise, it will return `False`.
+#### Checking the clients' ID
+Each app has a unique ID which will be shared with other participants in a federated workflow. In case a state needs
+to communicate data to a specific client, it can use `clients` property to get a list of clients' IDs. Developers can get the ID of the target app instance using the `id` property of `AppState`. Having these two properties can be helpful to distinguish between the ID of the target app instance from others.
+
 
 ### Other methods 
 
@@ -304,10 +353,11 @@ defined for at least one participant or coordinator role. In case states require
 For instance, to register the `initial` state with the constant role of `BOTH` and `app_name` as a state-specific argument,
 we can use `app_state` as follows:
 
-```angular2html
-@app_state(name='initial', role=BOTH, app_name=name)
+```python
+@app_state(name='initial', role=BOTH)
 class ExampleState(State):
-    def __init__(app_name)
+    def __init__(self):
+        pass
 ```
 This will automatically register `ExampleState` as the first state by the name of `initial` in the app. Meanwhile, once the state is instantiated, `app_name` will be passed to it.
 
@@ -319,7 +369,7 @@ in app level, ever
 ## app instance
 Different parts of the FeatureCloud library should use the same instance of the `App` class. These parts are as follows:
 - States: each state may need to be aware of the [Role](#roles) for carrying on different operations and have access to the app's 
-[`internal`](#shared-memory-for-states-appinternal) for data from other states. Therefore, the same app instance should be used for registering the states.
+[`internal`](#shared-memory-for-states-app_internal) for data from other states. Therefore, the same app instance should be used for registering the states.
 - api: In the `api` package, through the `bottle` library, the controller informs the app instance about its role, its ID, and ID of other
 clients. The same app instance should be used for that purpose too.
 

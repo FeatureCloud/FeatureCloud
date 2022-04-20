@@ -7,10 +7,15 @@
 Two major target groups who can benefit from FeatureCloud are researchers and developers. Any end-user who have data and 
 want to join others in a federated collaboration can use FeatureCloud without worrying about privacy concerns.
 On the other hand, developers can quickly implement a federated app and publish it in [FeatureCloud AI-store](https://featurecloud.ai/ai-store).
-Using [FeatureCloud engine](https://github.com/FeatureCloud/app-template/tree/master/engine), developers can extend states to introduce new ones; for more information on developing apps, you can visit our [GitHub repository](https://github.com/FeatureCloud/app-template). For registering and testing your apps or using other apps, please visit
+Using [FeatureCloud engine](https://github.com/FeatureCloud/FeatureCloud/tree/master/FeatureCloud/app), developers can extend states to introduce new ones; for more information on developing apps, you can visit our [GitHub repository](https://github.com/FeatureCloud/app-template). For registering and testing your apps or using other apps, please visit
 [FeatureCloud.ai](https://featurecloud.ai/). And for more information about FeatureCloud architecture,
 please refer to 
 [The FeatureCloud AI Store for Federated Learning in Biomedicine and Beyond](https://arxiv.org/abs/2105.05734) [[1]](#1).
+
+## Install FeatureCloud
+```shell
+pip install featurecloud
+```
 
 ## api
 FC api includes the necessary implementation to creat an app, run and manage the controller. It also includes the CLI to 
@@ -79,10 +84,10 @@ HTTP request commands to interact with the FC controller.
 The engine package in FeatureCloud introduces two major elements of app development: app and state. App class is responsible for registering states and transitions between them, verifying the app logic, and executing them. The app is a highly transparent component 
 that requires minimum developers' familiarity. The second class, state, is where local computations carry on. Developers should 
 insert their logic into states by assigning roles, adding, and taking transitions. For more information please refer to our 
-[app-template](https://github.com/FeatureCloud/app-template) repository.
+[app-template](https://github.com/FeatureCloud/FeatureCloud/tree/master/FeatureCloud/app) repository.
 ## workflow
 Implementing flexible non-linear workflows in FeatureCloud platform. For more information, please refer to our 
-[Wrokflow](https://github.com/FeatureCloud/Workflow) repository.
+[Wrokflow](https://github.com/FeatureCloud/FeatureCloud/tree/master/FeatureCloud/workflow) repository.
 
 
 ### References
