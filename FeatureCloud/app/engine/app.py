@@ -423,7 +423,7 @@ class AppState(abc.ABC):
         participant, coordinator = role.value
         self._app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
 
-    def aggregate_data(self, operation: SMPCOperation, use_smpc=False):
+    def aggregate_data(self, operation: SMPCOperation = SMPCOperation.ADD, use_smpc=False):
         """
         Waits for all participants (including the coordinator instance) to send data and returns the aggregated value.
 
