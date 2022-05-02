@@ -57,6 +57,7 @@ def start(name: str, port: int, data_dir: str):
             CONTROLLER_IMAGE,
             detach=True,
             name= name if name else DEFAULT_CONTROLLER_NAME,
+            platform='linux/amd64',
             ports={8000:port if port else DEFAULT_PORT},
             volumes=[f'{os.getcwd()}/data:/data', '/var/run/docker.sock:/var/run/docker.sock'],
             labels=[CONTROLLER_LABEL],
