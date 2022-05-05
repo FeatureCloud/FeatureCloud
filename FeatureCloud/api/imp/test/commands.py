@@ -38,41 +38,50 @@ def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: s
 def stop(controller_host: str, test_id: str or int):
     if not controller.is_online(controller_host):
         msg = f'No controller online on {controller_host}.'
-        return (None, msg)
+        return None, msg
 
     success, result = controller.stop_test(controller_host, test_id)
-    if not success:
-        msg = result
-        return (None, msg)
+
+    if success:
+        msg = 'Test stopped'
+    else:
+        msg = result['detail']
+
+    return None, msg
+
 
 def delete(controller_host: str, test_id: str or int, what: tuple):
     if not controller.is_online(controller_host):
         msg = f'No controller online on {controller_host}.'
-        return (None, msg)
+        return None, msg
 
     if test_id is not None and len(what) == 0:
         success, result = controller.delete_test(controller_host, test_id)
 
-        if not success:
+        if success:
+            msg = 'Test deleted'
+        else:
             msg = result['detail']
-            return (None, msg)
 
-        return (None, result)
+        return None, msg
 
     elif test_id is None and len(what) > 0:
         if what[0].lower() == 'all':
             success, result = controller.delete_tests(controller_host)
 
-            if not success:
+            if success:
+                msg = 'All tests deleted'
+            else:
                 msg = result['detail']
-                return (None, msg)
+
+            return None, msg
         else:
             msg = f'Unsupported argument {what[0]}'
-            return (None, msg)
+            return None, msg
 
     else:
         msg = 'Wrong combination of parameters. To delete a single test use option --test-id. To delete all tests use the "all" argument.'
-        return (None, msg)
+        return None, msg
 
 
 def list(controller_host: str, format: str):

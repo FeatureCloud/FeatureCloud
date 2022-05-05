@@ -1,13 +1,10 @@
 import tqdm
-import json
 import time
 
 import click
 import docker
 import os
-import tempfile
 import requests
-import subprocess
 from sys import exit
 
 CONTROLLER_IMAGE = "featurecloud.ai/controller"
@@ -22,12 +19,13 @@ LOG_LEVEL_CHOICES = ['debug', 'info', 'warn', 'error', 'fatal']
 def get_docker_client():
     return docker.from_env()
 
+
 def check_docker_status():
     """Checks whether all docker-related components have been installed."""
-    client = get_docker_client()
     try:
-        click.echo(client.version)
-    except docker.errors.APIError:
+        client = get_docker_client()
+        client.version()
+    except docker.errors.DockerException:
         click.echo("Docker daemon is not available")
         exit()
 
@@ -37,38 +35,45 @@ def check_controller_prerequisites():
 
 
 def start(name: str, port: int, data_dir: str):
-    client = get_docker_client()
     check_controller_prerequisites()
+    client = get_docker_client()
 
+    data_dir = data_dir if data_dir else DEFAULT_DATA_DIR
     # Create data dir if needed
     try:
         os.mkdir(data_dir)
     except OSError as error:
         pass
 
-    # Prune fc controllers
-    prune_controllers(name)
+    # cleanup unused controller containers
+    prune_controllers()
 
-    # Run start script
+    # pull controller and display progress
     pull_proc = client.api.pull(repository='featurecloud.ai/controller', stream=True)
     for p in tqdm.tqdm(pull_proc, desc='Downloading...'):
         pass
+
+    cont_name = name if name else DEFAULT_CONTROLLER_NAME
+    # forward slash works on all platforms (os.getcwd() result contains backslash on Windows)
+    base_dir = os.getcwd().replace("\\", "/")
+
     client.containers.run(
-            CONTROLLER_IMAGE,
-            detach=True,
-            name= name if name else DEFAULT_CONTROLLER_NAME,
-            platform='linux/amd64',
-            ports={8000:port if port else DEFAULT_PORT},
-            volumes=[f'{os.getcwd()}/data:/data', '/var/run/docker.sock:/var/run/docker.sock'],
-            labels=[CONTROLLER_LABEL],
-            command = f"--host-root={os.getcwd()}/data --internal-root=/data --controller-name=fc-controller"
-            )
+        CONTROLLER_IMAGE,
+        detach=True,
+        name=cont_name,
+        platform='linux/amd64',
+        ports={8000: port if port else DEFAULT_PORT},
+        volumes=[f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock'],
+        labels=[CONTROLLER_LABEL],
+        command=f"--host-root={base_dir}/{data_dir} --internal-root=/{data_dir} --controller-name={cont_name}"
+    )
+
 
 def stop(name: str):
     check_controller_prerequisites()
     client = get_docker_client()
 
-    if name:
+    if not name:
         name = DEFAULT_CONTROLLER_NAME
 
     # Removing controllers filtered by name
@@ -77,20 +82,18 @@ def stop(name: str):
         client.api.remove_container(container.id, v=True, force=True)
 
 
-def prune_controllers(name: str):
+def prune_controllers():
     check_controller_prerequisites()
     client = get_docker_client()
-
-    if not name:
-        name = DEFAULT_CONTROLLER_NAME
 
     client.containers.prune(filters={"label": [CONTROLLER_LABEL]})
 
 
 def logs(name: str, tail: bool, log_level: str):
-    # get controller address
     check_controller_prerequisites()
     client = get_docker_client()
+
+    # get controller address
     host_port = 0
     try:
         container = client.containers.get(name)
@@ -116,8 +119,8 @@ def logs(name: str, tail: bool, log_level: str):
 
 
 def status(name: str):
-    client = get_docker_client()
     check_controller_prerequisites()
+    client = get_docker_client()
     click.echo(client.containers.get(name))
 
 
