@@ -32,7 +32,7 @@ def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: s
         return (result['id'], msg)
     else:
         msg = result
-        return (None. msg)
+        return (None, msg)
 
 
 def stop(controller_host: str, test_id: str or int):
