@@ -1,17 +1,12 @@
-import json
+import tqdm
 import time
 
 import click
 import docker
 import os
-import tempfile
 import requests
-import subprocess
 from sys import exit
 
-START_SCRIPT_LOCATION = "./FeatureCloud/api/imp/controller/start_scripts"
-START_SCRIPT_DIR = "FeatureCloud"
-START_SCRIPT_NAME = "start_controller"
 CONTROLLER_IMAGE = "featurecloud.ai/controller"
 CONTROLLER_LABEL = "FCControllerLabel"
 DEFAULT_PORT = 8000
@@ -21,11 +16,16 @@ LOG_FETCH_INTERVAL = 3  # seconds
 LOG_LEVEL_CHOICES = ['debug', 'info', 'warn', 'error', 'fatal']
 
 
+def get_docker_client():
+    return docker.from_env()
+
+
 def check_docker_status():
     """Checks whether all docker-related components have been installed."""
     try:
-        subprocess.check_output(['docker', '--version'])
-    except OSError:
+        client = get_docker_client()
+        client.version()
+    except docker.errors.DockerException:
         click.echo("Docker daemon is not available")
         exit()
 
@@ -36,37 +36,44 @@ def check_controller_prerequisites():
 
 def start(name: str, port: int, data_dir: str):
     check_controller_prerequisites()
+    client = get_docker_client()
 
+    data_dir = data_dir if data_dir else DEFAULT_DATA_DIR
     # Create data dir if needed
     try:
         os.mkdir(data_dir)
     except OSError as error:
         pass
 
-    # Prune fc controllers
-    prune_controllers(name)
+    # cleanup unused controller containers
+    prune_controllers()
 
-    if os.name == 'nt':
-        start_script_extension = '.bat'
-    else:
-        start_script_extension = '.sh'
+    # pull controller and display progress
+    pull_proc = client.api.pull(repository='featurecloud.ai/controller', stream=True)
+    for p in tqdm.tqdm(pull_proc, desc='Downloading...'):
+        pass
 
-    start_script_path = prepare_start_script(start_script_extension, name, port, data_dir)
+    cont_name = name if name else DEFAULT_CONTROLLER_NAME
+    # forward slash works on all platforms (os.getcwd() result contains backslash on Windows)
+    base_dir = os.getcwd().replace("\\", "/")
 
-    # Run start script
-    if os.name == 'nt':
-        p = subprocess.Popen(start_script_path, shell=True, stdout=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        click.echo(p.returncode)
-    else:
-        subprocess.call(['sh', start_script_path])
+    client.containers.run(
+        CONTROLLER_IMAGE,
+        detach=True,
+        name=cont_name,
+        platform='linux/amd64',
+        ports={8000: port if port else DEFAULT_PORT},
+        volumes=[f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock'],
+        labels=[CONTROLLER_LABEL],
+        command=f"--host-root={base_dir}/{data_dir} --internal-root=/{data_dir} --controller-name={cont_name}"
+    )
 
 
 def stop(name: str):
     check_controller_prerequisites()
-    client = docker.from_env()
+    client = get_docker_client()
 
-    if len(name) == 0:
+    if not name:
         name = DEFAULT_CONTROLLER_NAME
 
     # Removing controllers filtered by name
@@ -75,20 +82,18 @@ def stop(name: str):
         client.api.remove_container(container.id, v=True, force=True)
 
 
-def prune_controllers(name: str):
+def prune_controllers():
     check_controller_prerequisites()
-    client = docker.from_env()
-
-    if len(name) == 0:
-        name = DEFAULT_CONTROLLER_NAME
+    client = get_docker_client()
 
     client.containers.prune(filters={"label": [CONTROLLER_LABEL]})
 
 
 def logs(name: str, tail: bool, log_level: str):
-    # get controller address
     check_controller_prerequisites()
-    client = docker.from_env()
+    client = get_docker_client()
+
+    # get controller address
     host_port = 0
     try:
         container = client.containers.get(name)
@@ -115,51 +120,14 @@ def logs(name: str, tail: bool, log_level: str):
 
 def status(name: str):
     check_controller_prerequisites()
-    click.echo(subprocess.check_output(['docker', 'ps', '--filter', 'name=' + name]))
+    client = get_docker_client()
+    click.echo(client.containers.get(name))
 
 
 def ls():
     check_controller_prerequisites()
-    click.echo(subprocess.check_output(['docker', 'ps', '--filter', 'label=' + CONTROLLER_LABEL]))
-
-
-def prepare_start_script(start_script_extension: str, name: str, port: int, data_dir: str):
-    start_script_path = os.path.join(START_SCRIPT_LOCATION, START_SCRIPT_NAME + start_script_extension)
-
-    # Read in the file
-    with open(start_script_path, 'r') as file:
-        start_script = file.read()
-
-    # Stop controllers with the same name
-    start_script = start_script.replace("kill " + DEFAULT_CONTROLLER_NAME, "kill " + name)
-    start_script = start_script.replace("rm " + DEFAULT_CONTROLLER_NAME, "rm " + name)
-
-    if name != DEFAULT_CONTROLLER_NAME:
-        click.echo("Changing default controller name to " + name)
-        # For Windows
-        start_script = start_script.replace("controllerName=" + DEFAULT_CONTROLLER_NAME, "controllerName=" + name)
-        # For MacOS/Linux
-        start_script = start_script.replace("--name " + DEFAULT_CONTROLLER_NAME, "--name " + name)
-        start_script = start_script.replace("--controller-name=" + DEFAULT_CONTROLLER_NAME, "--controller-name=" + name)
-
-    if port != DEFAULT_PORT:
-        click.echo("Changing default port to " + str(port))
-        start_script = start_script.replace(str(DEFAULT_PORT) + ":", str(port) + ":")
-
-    if data_dir != DEFAULT_DATA_DIR:
-        click.echo("Changing default data dir to " + data_dir)
-        start_script = start_script.replace(DEFAULT_DATA_DIR, data_dir)
-
-    start_script_dir = os.path.join(tempfile.gettempdir(), START_SCRIPT_DIR)
-    if not os.path.exists(start_script_dir):
-        os.makedirs(start_script_dir)
-    start_script_path = os.path.join(start_script_dir, START_SCRIPT_NAME + start_script_extension)
-
-    # Write the file out again
-    with open(start_script_path, 'w') as file:
-        file.write(start_script)
-
-    return start_script_path
+    client = get_docker_client()
+    click.echo(client.containers.list(filters={'label': [CONTROLLER_LABEL]}))
 
 
 def prepare_logs(logs_json, log_level):
