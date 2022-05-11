@@ -60,6 +60,14 @@ def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str 
 
 
 def download(name: str, tag: str = "latest"):
+    """ Download a given docker image from FeatureCloud.ai docker repo.
+
+    Parameters
+    ----------
+    name: image name
+    tag: tag
+
+    """
     name, msg = fc_repo_name_check(name, tag)
     if name is not None:
         client = docker.from_env()
@@ -88,6 +96,14 @@ def log(proc, description):
 
 
 def publish(name: str, tag: str = "latest"):
+    """ Push a given app into FeatureCloud.ai docker repo.
+
+    Parameters
+    ----------
+    name: image name
+    tag: tag
+
+    """
     name, msg = fc_repo_name_check(name, tag)
     if name is not None:
         client = docker.from_env()
@@ -97,6 +113,13 @@ def publish(name: str, tag: str = "latest"):
 
 
 def remove(name: str):
+    """ Delete docker image from local hard drive.
+
+    Parameters
+    ----------
+    name: image name
+
+    """
     client = docker.from_env()
     client.images.remove(image=name)
     return None, None
