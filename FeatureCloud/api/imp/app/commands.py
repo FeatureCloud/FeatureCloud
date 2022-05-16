@@ -4,6 +4,8 @@ from urllib.parse import urljoin
 import docker
 import tqdm
 
+from FeatureCloud.api.imp.util import getcwd_fslash
+
 
 def create_link(template_name: str) -> str:
     TEMPLATE_URL = 'https://github.com/FeatureCloud/'
@@ -26,16 +28,16 @@ def new(name: str, directory: str = '.', template_name: str = 'app-blank') -> st
     (None, msg): msg: str
 
     """
-    repo = git.Repo.clone_from(create_link(template_name), os.path.join(directory, name))
+    repo = git.Repo.clone_from(create_link(template_name), os.path.join(directory, name), )
     repo.delete_remote('origin')
     msg = 'Ready to develop! Enjoy!'
     return (None, msg)
 
 
-def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str = False):
+def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str = True):
     """ Build app image,
-     Once on image_name is provided the name of the current directory will be used
-     Also, the current directory will be searched for the Dockerfile
+     Once on image_name is provided the name of the current directory will be used.
+     Also, the current directory will be searched for the Dockerfile.
 
     Parameters
     ----------
@@ -52,7 +54,7 @@ def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str 
 
     """
     if image_name is None:
-        image_name = os.getcwd().split("/")[-1]
+        image_name = getcwd_fslash().split("/")[-1]
     client = docker.from_env()
     build_proc = client.api.build(path=path, tag=f"{image_name}:{tag}", rm=rm)
     log(build_proc, description=f"Building {image_name}:{tag} ...")
@@ -71,7 +73,7 @@ def download(name: str, tag: str = "latest"):
     name, msg = fc_repo_name_check(name, tag)
     if name is not None:
         client = docker.from_env()
-        pull_proc = client.api.pull(name)
+        pull_proc = client.api.pull(repository=name, tag=tag)
         log(pull_proc, description=f"Downloading {name} ...")
     return None, msg
 
@@ -87,7 +89,7 @@ def fc_repo_name_check(name, tag):
         msg = f"The complete name should include the FeatureCloud docker repository address." \
               f"\nThe app name is completed: {name}\n"
         return None, msg
-    return f"{name}:{tag}", msg
+    return name, msg
 
 
 def log(proc, description):
