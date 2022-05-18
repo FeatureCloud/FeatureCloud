@@ -1,9 +1,14 @@
+import os
+
 import click
+from FeatureCloud.api.imp.exceptions import FCException
+
 from FeatureCloud.api.imp.controller import commands
 
 @click.group("controller")
-def controller()-> None:
+def controller() -> None:
     """Controller start/stop"""
+
 
 @controller.command('start')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
@@ -14,7 +19,12 @@ def start(what: tuple, port: int, data_dir: str) -> None:
     name = commands.DEFAULT_CONTROLLER_NAME
     if len(what) > 0:
         name = what[0]
-    commands.start(name, port, data_dir)
+    try:
+        commands.start(name, port, data_dir)
+        click.echo(f'Started controller: {name}')
+    except FCException as e:
+        click.echo(f'Error: {e}')
+
 
 @controller.command('stop')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
@@ -23,7 +33,16 @@ def stop(what: tuple) -> None:
     name = commands.DEFAULT_CONTROLLER_NAME
     if len(what) > 0:
         name = what[0]
-    commands.stop(name)
+
+    try:
+        result = commands.stop(name)
+        if len(result) == 0:
+            click.echo(f'No controller found with name {name}')
+        else:
+            click.echo(f'Stopped controller(s): {",".join(result)}')
+    except FCException as e:
+        click.echo(f'Error: {e}')
+
 
 @controller.command('logs')
 @click.option('--tail', help='View the tail of controller logs.', default=False, required=False)
@@ -34,10 +53,12 @@ def logs(what: tuple, log_level: str, tail: bool) -> None:
     name = commands.DEFAULT_CONTROLLER_NAME
     if len(what) > 0:
         name = what[0]
-    log_level_choices = ['debug', 'info', 'warn', 'error', 'fatal']
-    if len(log_level) == 0 or log_level not in log_level_choices:
-        log_level = log_level_choices[0]
-    commands.logs(name, tail, log_level)
+
+    try:
+        for line in commands.logs(name, tail, log_level):
+            click.echo(line)
+    except FCException as e:
+        click.echo(f'Error: {e}')
 
 
 @controller.command('status')
@@ -47,9 +68,23 @@ def status(what: tuple) -> None:
     name = commands.DEFAULT_CONTROLLER_NAME
     if len(what) > 0:
         name = what[0]
-    commands.status(name)
+
+    try:
+        container = commands.status(name)
+        click.echo(f'Id: {container.short_id}, Status: {container.status}')
+    except FCException as e:
+        click.echo(f'Error: {e}')
+
 
 @controller.command('ls')
 def ls() -> None:
     """Lists all running controller instances"""
-    commands.ls()
+    try:
+        result = commands.ls()
+        if len(result) == 0:
+            click.echo('No controllers found')
+        else:
+            for container in result:
+                click.echo(f'Id: {container.short_id}, Status: {container.status}')
+    except FCException as e:
+        click.echo(f'Error: {e}')

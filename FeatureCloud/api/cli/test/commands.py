@@ -1,4 +1,8 @@
+import os
+
 import click
+from FeatureCloud.api.imp.exceptions import FCException
+
 from FeatureCloud.api.imp.test import commands
 from FeatureCloud.api.cli.test.workflow.commands import workflow
 
@@ -42,9 +46,12 @@ def help():
               default='')
 def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval,
           download_results: str):
-    _, msg = commands.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval,
-                            download_results)
-    click.echo(msg)
+    try:
+        result = commands.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval,
+                                download_results)
+        click.echo(f"Test id={result} started")
+    except FCException as e:
+        click.echo(f'Error: {e}')
 
 
 @test.command('stop')
@@ -53,8 +60,11 @@ def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: s
               required=True)
 @click.option('--test-id', help='The test id of the test to be stopped.')
 def stop(controller_host: str, test_id: str or int):
-    _, msg = commands.stop(controller_host, test_id)
-    click.echo(msg)
+    try:
+        result = commands.stop(controller_host, test_id)
+        click.echo(f"Test id={result} stopped")
+    except FCException as e:
+        click.echo(f'Error: {e}')
 
 
 @test.command('delete')
@@ -65,8 +75,14 @@ def stop(controller_host: str, test_id: str or int):
                                 'To delete all tests omit this option and use "delete all".')
 @click.argument('what', nargs=-1)  # using variadic arguments to make it not required
 def delete(controller_host: str, test_id: str or int, what: tuple):
-    _, msg = commands.delete(controller_host, test_id, what)
-    click.echo(msg)
+    try:
+        result = commands.delete(controller_host, test_id, what)
+        if result.lower() == 'all':
+            click.echo(f"All tests deleted")
+        else:
+            click.echo(f"Test id={result} deleted")
+    except FCException as e:
+        click.echo(f'Error: {e}')
 
 
 @test.command('list')
@@ -75,8 +91,14 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
               required=True)
 @click.option('--format', help='Format of the test list. json or dataframe', required=True, default='dataframe')
 def list(controller_host: str, format: str):
-    _, msg = commands.list(controller_host, format)
-    click.echo(msg)
+    try:
+        result = commands.list(controller_host, format)
+        if len(result) == 0:
+            click.echo('No tests available')
+        else:
+            click.echo(result)
+    except FCException as e:
+        click.echo(f'Error: {e}')
 
 
 @test.command('info')
@@ -86,8 +108,11 @@ def list(controller_host: str, format: str):
 @click.option('--test-id', help='Test id', required=True)
 @click.option('--format', help='Format of the test info. json or dataframe', required=True, default='dataframe')
 def info(controller_host: str, test_id: str or int, format: str):
-    _, msg = commands.info(controller_host, test_id, format)
-    click.echo(msg)
+    try:
+        result = commands.info(controller_host, test_id, format)
+        click.echo(result)
+    except FCException as e:
+        click.echo(f'Error: {e}')
 
 
 @test.command('traffic')
@@ -97,8 +122,11 @@ def info(controller_host: str, test_id: str or int, format: str):
 @click.option('--test-id', help='The test id of the test to be stopped.')
 @click.option('--format', help='Format of the test traffic. json or dataframe', required=True, default='dataframe')
 def traffic(controller_host: str, test_id: str or int, format: str):
-    _, msg = commands.traffic(controller_host, test_id, format)
-    click.echo(msg)
+    try:
+        result = commands.traffic(controller_host, test_id, format)
+        click.echo(result)
+    except FCException as e:
+        click.echo(f'Error: {e}')
 
 
 @test.command('logs')
@@ -109,8 +137,14 @@ def traffic(controller_host: str, test_id: str or int, format: str):
 @click.option('--instance-id', help='The instance id of the client.', required=True)
 @click.option('--from-param', help='From param', default='', required=True)
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
-    _, msg = commands.logs(controller_host, test_id, instance_id, from_param)
-    click.echo(msg)
+    try:
+        result = commands.logs(controller_host, test_id, instance_id, from_param)
+        log_lines = ""
+        for line in result:
+            log_lines += str(line) + os.linesep
+        click.echo(log_lines)
+    except FCException as e:
+        click.echo(f'Error: {e}')
 
 
 if __name__ == "__main__":

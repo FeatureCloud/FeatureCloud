@@ -1,6 +1,6 @@
-from sys import exit
-from FeatureCloud.api.imp.test.api import controller
 from FeatureCloud.api.imp.test import helper
+from FeatureCloud.api.imp.test.api import controller
+from FeatureCloud.api.imp.exceptions import ControllerOffline, FCException
 
 
 def help():
@@ -16,8 +16,7 @@ def help():
 def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval,
           download_results: str):
     if not controller.is_online(controller_host):
-        msg = f'No controller online on {controller_host}. Exiting.'
-        return (None, msg)
+        raise ControllerOffline(controller_host)
 
     success, result = controller.start_test(controller_host,
                                             app_image,
@@ -28,143 +27,98 @@ def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: s
                                             download_results)
 
     if success:
-        msg = result['id']
-        return (result['id'], msg)
+        return result['id']
     else:
-        msg = result
-        return (None, msg)
+        raise FCException(result['detail'])
 
 
 def stop(controller_host: str, test_id: str or int):
     if not controller.is_online(controller_host):
-        msg = f'No controller online on {controller_host}.'
-        return None, msg
+        raise ControllerOffline(controller_host)
 
     success, result = controller.stop_test(controller_host, test_id)
 
     if success:
-        msg = 'Test stopped'
+        return test_id
     else:
-        msg = result['detail']
-
-    return None, msg
+        raise FCException(result['detail'])
 
 
 def delete(controller_host: str, test_id: str or int, what: tuple):
     if not controller.is_online(controller_host):
-        msg = f'No controller online on {controller_host}.'
-        return None, msg
+        raise ControllerOffline(controller_host)
 
     if test_id is not None and len(what) == 0:
         success, result = controller.delete_test(controller_host, test_id)
 
         if success:
-            msg = 'Test deleted'
+            return test_id
         else:
-            msg = result['detail']
-
-        return None, msg
+            raise FCException(result['detail'])
 
     elif test_id is None and len(what) > 0:
         if what[0].lower() == 'all':
             success, result = controller.delete_tests(controller_host)
 
             if success:
-                msg = 'All tests deleted'
+                return 'all'
             else:
-                msg = result['detail']
-
-            return None, msg
+                raise FCException(result['detail'])
         else:
-            msg = f'Unsupported argument {what[0]}'
-            return None, msg
+            raise FCException(f'Unsupported argument {what[0]}')
 
     else:
-        msg = 'Wrong combination of parameters. To delete a single test use option --test-id. To delete all tests use the "all" argument.'
-        return None, msg
+        raise FCException('Wrong combination of parameters. To delete a single test use option --test-id. To delete all tests use the "all" argument.')
 
 
-def list(controller_host: str, format: str):
+def list(controller_host: str, format: str = 'dataframe'):
     if not controller.is_online(controller_host):
-        msg = f'No controller online on {controller_host}. Exiting.'
-        return (None, msg)
+        raise ControllerOffline(controller_host)
 
     success, result = controller.get_tests(controller_host)
     if success:
-        if len(result) == 0:
-            msg = 'No tests available.'
-            return (None, msg)
         if format == 'json':
-            msg = result
-            return (result, msg)
-        elif format == 'dataframe':
-            df = helper.json_to_dataframe(result).set_index('id')
-            msg = df.to_string()
-            return (df, msg)
+            return result
         else:
-            msg = f'Format {format} not available. Returning json.'
-            msg += result
-            return (result, msg)
+            return helper.json_to_dataframe(result).set_index('id')
     else:
-        msg = result
-        return (None, msg)
+        raise FCException(result)
 
 
-def info(controller_host: str, test_id: str or int, format: str):
+def info(controller_host: str, test_id: str or int, format: str = 'dataframe'):
     if not controller.is_online(controller_host):
-        msg = f'No controller online on {controller_host}. Exiting.'
-        return (None, msg)
+        raise ControllerOffline(controller_host)
 
     success, result = controller.get_test(controller_host, test_id)
     if success:
         if format == 'json':
-            msg = result
-            return (result, msg)
-        elif format == 'dataframe':
-            df = helper.json_to_dataframe(result, single_entry=True).set_index('id')
-            msg = df.to_string()
-            return (df, msg)
+            return result
         else:
-            msg = f'Format {format} not available. Returning json.'
-            return (result, msg)
+            return helper.json_to_dataframe(result, single_entry=True).set_index('id')
     else:
-        msg = result['detail']
-        return (None, msg)
+        raise FCException(result['detail'])
 
 
 def traffic(controller_host: str, test_id: str or int, format: str):
     if not controller.is_online(controller_host):
-        msg = f'No controller online on {controller_host}. Exiting.'
-        return (None, msg)
+        raise ControllerOffline(controller_host)
 
     success, result = controller.get_traffic(controller_host, test_id)
     if success:
         if format == 'json':
-            msg = result
-            return (result, msg)
-        elif format == 'dataframe':
-            df = helper.json_to_dataframe(result)
-            msg = df.to_string()
-            return (df, msg)
+            return result
         else:
-            msg = f'Format {format} not available. Returning json.'
-            return (result, msg)
+            return helper.json_to_dataframe(result)
     else:
-        msg = result['detail']
-        return (None, msg)
+        raise FCException(result['detail'])
 
 
 def logs(controller_host: str, test_id: str or int, instance_id: str or int, from_param: str):
     if not controller.is_online(controller_host):
-        msg = f'No controller online on {controller_host}. Exiting.'
-        return (None, msg)
+        raise ControllerOffline(controller_host)
 
     success, result = controller.get_logs(controller_host, test_id, instance_id, from_param)
     if success:
-        msg = ""
-        for line in result["logs"]:
-            msg += '\n' + line
-        return (result, msg)
+        return result["logs"]
     else:
-        msg = result['detail']
-        return (None, msg)
+        raise FCException(result['detail'])
