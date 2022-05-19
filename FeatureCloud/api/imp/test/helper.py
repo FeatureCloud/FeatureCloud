@@ -15,11 +15,15 @@ http.mount("https://", adapter)
 http.mount("http://", adapter)
 
 
-def json_to_dataframe(json, single_entry: bool = False):
-    if not single_entry:
+def json_to_dataframe(json, single_entry: bool = False, default_column: str = 'id'):
+    if len(json) == 0:
+        # return empty data frame
+        df = pd.DataFrame({default_column: []})
+    elif not single_entry:
         df = pd.DataFrame.from_records(json)
     else:
         df = pd.DataFrame.from_dict(json, orient='index').T
+
     try:
         df.createdAt = pd.to_datetime(df.createdAt).apply(lambda x: str(x).split(".")[0])
     except Exception:
