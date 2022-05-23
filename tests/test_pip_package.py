@@ -56,7 +56,7 @@ class TestPipPackageTestCase(TestCase):
 
     def stop_test_app(self, test_id):
         try:
-            output = subprocess.check_output([f'featurecloud test stop --test-id={test_id}'], shell=True)
+            output = subprocess.check_output([f'featurecloud  test stop --test-id={test_id}'], shell=True)
             assert output.find(b'stopped') > -1
         except subprocess.CalledProcessError as e:
             print(e.returncode)
@@ -71,4 +71,9 @@ class TestPipPackageTestCase(TestCase):
             print(e.output)
 
     def create_new_app(self):
-        pass
+        try:
+            output = subprocess.check_output(["featurecloud app new my-blank-app --template-name=app-blank"], shell=True)
+            assert output.find(b'Ready to develop! Enjoy!') > -1
+        except subprocess.CalledProcessError as e:
+            print(e.returncode)
+            print(e.output)
