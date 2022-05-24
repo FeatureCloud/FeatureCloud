@@ -32,6 +32,18 @@ class TestPipPackageTestCase(TestCase):
             print(e.output)
 
     def run_dice_app(self):
+        # TODO: enable this when dice app becomes available on featurecloud.ai
+        # try:
+        #     output = subprocess.check_output([
+        #         'featurecloud test start --controller-host=http://localhost:8000 --client-dirs=. --generic-dir=. --app-image=featurecloud.ai/dice_app'],
+        #         shell=True)
+        #     output = output.decode("utf-8")
+        #     assert output.find('started') > -1
+        #     output = output.replace('Test id=', '')
+        #     return output.replace(' started', '')
+        # except subprocess.CalledProcessError as e:
+        #     print(e.returncode)
+        #     print(e.output)
         pass
 
     def run_test_app(self):
