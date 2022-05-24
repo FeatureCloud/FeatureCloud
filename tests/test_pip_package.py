@@ -16,10 +16,9 @@ class TestPipPackageTestCase(TestCase):
 
     def test_pip(self):
         self.start_controller()
-        self.run_dice_app()
-        test_id = self.run_test_app()
+        test_id = self.run_app('featurecloud.ai/dice_app')
         self.check_logs(test_id)
-        self.stop_test_app(test_id)
+        self.stop_app(test_id)
         self.stop_controller()
         self.create_new_app()
 
@@ -31,25 +30,10 @@ class TestPipPackageTestCase(TestCase):
             print(e.returncode)
             print(e.output)
 
-    def run_dice_app(self):
-        # TODO: enable this when dice app becomes available on featurecloud.ai
-        # try:
-        #     output = subprocess.check_output([
-        #         'featurecloud test start --controller-host=http://localhost:8000 --client-dirs=. --generic-dir=. --app-image=featurecloud.ai/dice_app'],
-        #         shell=True)
-        #     output = output.decode("utf-8")
-        #     assert output.find('started') > -1
-        #     output = output.replace('Test id=', '')
-        #     return output.replace(' started', '')
-        # except subprocess.CalledProcessError as e:
-        #     print(e.returncode)
-        #     print(e.output)
-        pass
-
-    def run_test_app(self):
+    def run_app(self, app_name):
         try:
             output = subprocess.check_output([
-                'featurecloud test start --controller-host=http://localhost:8000 --client-dirs=. --generic-dir=. --app-image=featurecloud.ai/test_app'],
+                f'featurecloud test start --controller-host=http://localhost:8000 --client-dirs=. --generic-dir=. --app-image={app_name}'],
                 shell=True)
             output = output.decode("utf-8")
             assert output.find('started') > -1
@@ -69,7 +53,7 @@ class TestPipPackageTestCase(TestCase):
             print(e.returncode)
             print(e.output)
 
-    def stop_test_app(self, test_id):
+    def stop_app(self, test_id):
         try:
             output = subprocess.check_output([f'featurecloud  test stop --test-id={test_id}'], shell=True)
             assert output.find(b'stopped') > -1
