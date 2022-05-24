@@ -1,12 +1,13 @@
 import subprocess
 from unittest import TestCase
 
+
 class TestPipPackageTestCase(TestCase):
 
     def setUp(self):
         # Install package. This should happen in CICD pipeline prior running these tests
         # try:
-        #     output = subprocess.check_output(['pip install dist/FeatureCloud-0.0.15.tar.gz'], shell=True)
+        #     output = subprocess.check_output(['pip install featurecloud'], shell=True)
         #     assert output.find(b'Successfully installed FeatureCloud') > -1
         # except subprocess.CalledProcessError as e:
         #     print(e.returncode)
@@ -36,8 +37,8 @@ class TestPipPackageTestCase(TestCase):
     def run_test_app(self):
         try:
             output = subprocess.check_output([
-                                                 'featurecloud test start --controller-host=http://localhost:8000 --client-dirs=. --generic-dir=. --app-image=featurecloud.ai/test_app'],
-                                             shell=True)
+                'featurecloud test start --controller-host=http://localhost:8000 --client-dirs=. --generic-dir=. --app-image=featurecloud.ai/test_app'],
+                shell=True)
             output = output.decode("utf-8")
             assert output.find('started') > -1
             output = output.replace('Test id=', '')
@@ -48,7 +49,9 @@ class TestPipPackageTestCase(TestCase):
 
     def check_logs(self, test_id):
         try:
-            output = subprocess.check_output([f' featurecloud test logs --test-id={test_id}  --controller-host=http://localhost:8000 --instance-id=0 --from-param=0'], shell=True)
+            output = subprocess.check_output([
+                                                 f' featurecloud test logs --test-id={test_id}  --controller-host=http://localhost:8000 --instance-id=0 --from-param=0'],
+                                             shell=True)
             assert output.find(b'Sent status') > -1
         except subprocess.CalledProcessError as e:
             print(e.returncode)
@@ -72,7 +75,8 @@ class TestPipPackageTestCase(TestCase):
 
     def create_new_app(self):
         try:
-            output = subprocess.check_output(["featurecloud app new my-blank-app --template-name=app-blank"], shell=True)
+            output = subprocess.check_output(["featurecloud app new my-blank-app --template-name=app-blank"],
+                                             shell=True)
             assert output.find(b'Ready to develop! Enjoy!') > -1
         except subprocess.CalledProcessError as e:
             print(e.returncode)
