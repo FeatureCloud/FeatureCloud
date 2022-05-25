@@ -70,31 +70,11 @@ def download(name: str, tag: str = "latest"):
     tag: tag
 
     """
-    name, msg = fc_repo_name_check(name, tag)
-    if name is not None:
-        client = docker.from_env()
-        pull_proc = client.api.pull(repository=name, tag=tag)
-        log(pull_proc, description=f"Downloading {name} ...")
-    return None, msg
-
-
-def fc_repo_name_check(name, tag):
-    msg = ""
-    if "featurecloud.ai/" not in name:
-        if "/" in name:
-            correct_name = f"featurecloud.ai/{name.strip().split('/')[-1]}:{tag}"
-            msg = f"The app docker image name {name}:{tag} is not correct.\n{correct_name} can be an acceptable name!"
-            return None, msg
-        name = f"featurecloud.ai/{name}"
-        msg = f"The complete name should include the FeatureCloud docker repository address." \
-              f"\nThe app name is completed: {name}\n"
-        return None, msg
-    return name, msg
-
-
-def log(proc, description):
-    for _ in tqdm.tqdm(proc, desc=description):
-        pass
+    fc_name = fc_repo_name(name)
+    client = docker.from_env()
+    pull_proc = client.api.pull(repository=fc_name, tag=tag)
+    log(pull_proc, description=f"Downloading {fc_name} ...")
+    return None, None
 
 
 def publish(name: str, tag: str = "latest"):
@@ -106,12 +86,13 @@ def publish(name: str, tag: str = "latest"):
     tag: tag
 
     """
-    name, msg = fc_repo_name_check(name, tag)
-    if name is not None:
-        client = docker.from_env()
-        push_proc = client.api.push(repository=name, tag=tag)
-        log(push_proc, description=f"Uploading {name}:{tag} ...")
-    return None, msg
+    fc_name = fc_repo_name(name)
+    client = docker.from_env()
+    client.images.get(name).tag(fc_name)
+
+    push_proc = client.api.push(repository=fc_name, tag=tag)
+    log(push_proc, description=f"Uploading {fc_name}:{tag} ...")
+    return None, None
 
 
 def remove(name: str):
@@ -125,3 +106,15 @@ def remove(name: str):
     client = docker.from_env()
     client.images.remove(image=name)
     return None, None
+
+
+def fc_repo_name(name):
+    if not name.startswith("featurecloud.ai/"):
+        return f'featurecloud.ai/{name}'
+
+    return name
+
+
+def log(proc, description):
+    for _ in tqdm.tqdm(proc, desc=description):
+        pass
