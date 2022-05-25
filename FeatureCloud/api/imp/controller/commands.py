@@ -6,6 +6,8 @@ import os
 from FeatureCloud.api.imp.exceptions import DockerNotAvailable, FCException, ContainerNotFound
 from FeatureCloud.api.imp.test.helper import http
 
+from FeatureCloud.api.imp.util import getcwd_fslash
+
 CONTROLLER_IMAGE = "featurecloud.ai/controller"
 CONTROLLER_LABEL = "FCControllerLabel"
 DEFAULT_PORT = 8000
@@ -63,8 +65,8 @@ def start(name: str, port: int, data_dir: str):
         raise FCException(e)
 
     cont_name = name if name else DEFAULT_CONTROLLER_NAME
-    # forward slash works on all platforms (os.getcwd() result contains backslash on Windows)
-    base_dir = os.getcwd().replace("\\", "/")
+    # forward slash works on all platforms
+    base_dir = getcwd_fslash()
 
     try:
         client.containers.run(
