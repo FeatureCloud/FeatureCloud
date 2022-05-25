@@ -7,6 +7,8 @@ import os
 import requests
 from sys import exit
 
+from FeatureCloud.api.imp.util import getcwd_fslash
+
 CONTROLLER_IMAGE = "featurecloud.ai/controller"
 CONTROLLER_LABEL = "FCControllerLabel"
 DEFAULT_PORT = 8000
@@ -54,8 +56,8 @@ def start(name: str, port: int, data_dir: str):
         pass
 
     cont_name = name if name else DEFAULT_CONTROLLER_NAME
-    # forward slash works on all platforms (os.getcwd() result contains backslash on Windows)
-    base_dir = os.getcwd().replace("\\", "/")
+    # forward slash works on all platforms
+    base_dir = getcwd_fslash()
 
     client.containers.run(
         CONTROLLER_IMAGE,
