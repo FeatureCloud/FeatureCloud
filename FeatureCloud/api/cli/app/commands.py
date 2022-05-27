@@ -59,6 +59,8 @@ def publish(name: str, tag: str):
         for _ in tqdm.tqdm(result, desc=f"Uploading {name}:{tag} ..."):
             pass
     except FCException as e:
+        if str(e).find("authentication required") > -1:
+            click.echo(f'Image cannot be pushed. A docker login is necessary to featurecloud.ai with user credentials or the app is inexistent in Featurecloud App Store. In this case please create an app in App Store with the specified image name.')
         click.echo(f'Error: {e}')
 
 
