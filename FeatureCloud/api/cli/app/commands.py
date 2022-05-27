@@ -18,7 +18,7 @@ def app() -> None:
 @click.argument('directory', type=click.Path(), nargs=1, required=False)
 @click.option('--template-name', help='You can specify a template. If empty, an empty project will be created (e.g. featurecloud app new my-new-app . --template-name=featurecloud.ai/template_app_name).')
 def new(name: click.Path, directory: click.Path, template_name: str):
-    '''
+    """
     Create new app
 
     NAME is the app name
@@ -27,8 +27,9 @@ def new(name: click.Path, directory: click.Path, template_name: str):
 
     Example: featurecloud app new my-new-app .
 
-    '''
+    """
     try:
+        path = commands.new(**{k: v for k, v in locals().items() if v})
         path = commands.new(**{k: v for k, v in locals().items() if v})
         click.echo(f'Path to your app: {os.path.abspath(path)}')
         click.echo('Enjoy!')
@@ -42,7 +43,7 @@ def new(name: click.Path, directory: click.Path, template_name: str):
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
 @click.argument('rm', type=bool, default=True, nargs=1, required=False)
 def build(path: click.Path, image_name: str, tag: str, rm: bool):
-    '''
+    """
 
     Build app
 
@@ -50,12 +51,12 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
 
     IMAGE_NAME is the Docker image name
 
-    TAG the Docker tag for the version to be built
+    TAG the Docker tag for the version to be built. Default: 'latest'.
 
-    RM remove intermediary containers
+    RM remove intermediary containers.
 
     Example: featurecloud app build ./my-new-app my-new-app first_version True
-    '''
+    """
     try:
         result = commands.build(**{k: v for k, v in locals().items() if v})
         for _ in tqdm.tqdm(result, desc=f"Building {image_name}:{tag} ..."):
@@ -73,7 +74,7 @@ def download(name: str, tag: str):
 
     NAME is the image name
 
-    TAG is the image tag
+    TAG is the image versioning tag. Default: 'latest'.
 
     Example: featurecloud app download my_app:latest
     """
@@ -94,11 +95,11 @@ def publish(name: str, tag: str):
 
     NAME is the image name
 
-    TAG is the image tag
+    TAG is the image versioning tag. Default: 'latest'.
 
     Example: featurecloud app publish my-app:latest
 
-    The app should be created and the image name set in the App Store prior publishing
+    The app should be created and the image name set in the AI Store prior publishing
 
     """
     try:
@@ -107,22 +108,28 @@ def publish(name: str, tag: str):
             pass
     except FCException as e:
         if str(e).find("authentication required") > -1:
-            click.echo(f'Image cannot be pushed. A docker login is necessary to featurecloud.ai with user credentials or the app is inexistent in Featurecloud App Store. In this case please create an app in App Store with the specified image name.')
+            click.echo(f'Image cannot be pushed. A docker login is necessary to featurecloud.ai with user credentials or the app is inexistent in Featurecloud AI Store. In this case please create an app in AI Store with the specified image name.')
         click.echo(f'Error: {e}')
 
 
 @app.command('remove')
 @click.argument('name', type=str, default=None, nargs=1, required=True)
-def remove(name: str):
+@click.argument('tag', type=str, default="latest", nargs=1, required=False)
+def remove(name: str, tag: str):
     """
-    Delete an image from the local repository. This command will not delete the app from FeatureCloud App Store.
+    Delete app image(s) from the local repository. This command will not delete the app from FeatureCloud AI Store.
 
     NAME is the image name to be deleted
 
-    Example: featurecloud app delete featurecloud.ai/my-app
+    TAG is the image versioning tag. If set to 'all', all versions will be deleted. Default: 'latest'.
+
+    Example: featurecloud app remove my-app all
     """
     try:
-        commands.remove(**{k: v for k, v in locals().items() if v})
-        click.echo(f'Image {name} removed')
+        result = commands.remove(**{k: v for k, v in locals().items() if v})
+        if len(result) == 0:
+            click.echo(f'No image found')
+        else:
+            click.echo(f'Removed image(s): {",".join(result)}')
     except FCException as e:
         click.echo(f'Error: {e}')

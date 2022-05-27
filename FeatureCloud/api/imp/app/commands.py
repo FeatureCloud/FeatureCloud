@@ -8,6 +8,8 @@ from git import GitError
 from FeatureCloud.api.imp.exceptions import FCException
 from FeatureCloud.api.imp.util import getcwd_fslash, get_docker_client
 
+FC_REPO_PREFIX = "featurecloud.ai/"
+
 
 def create_link(template_name: str) -> str:
     TEMPLATE_URL = 'https://github.com/FeatureCloud/'
@@ -151,26 +153,37 @@ def publish(name: str, tag: str = "latest"):
         raise FCException(e)
 
 
-def remove(name: str):
+def remove(name: str, tag: str = "latest"):
     """ Delete docker image from local hard drive.
 
     Parameters
     ----------
     name: str
         image name
+    tag: str
+        the versioning tag to be removed. If set to 'all', all versions will be deleted.
     Raises
     -------
          FeatureCloud.api.imp.exceptions.FCException
     """
+    to_find = name if tag == 'all' else f'{name}:{tag}'
     client = get_docker_client()
-    try:
-        client.images.remove(image=name)
-    except docker.errors.DockerException as e:
-        raise FCException(e)
+    removed = []
+
+    for img in client.images.list(to_find):
+        # one image id may have several tags
+        for img_tag in img.tags:
+            try:
+                client.images.remove(image=img_tag, force=True)
+            except docker.errors.DockerException as e:
+                raise FCException(e)
+        removed = removed + img.tags
+
+    return removed
 
 
 def fc_repo_name(name):
-    if not name.startswith("featurecloud.ai/"):
-        return f'featurecloud.ai/{name}'
+    if not name.startswith(FC_REPO_PREFIX):
+        return f'{FC_REPO_PREFIX}{name}'
 
     return name
