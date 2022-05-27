@@ -67,17 +67,19 @@ def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str 
 
     client = get_docker_client()
     try:
+        # Docker would also check for Dockerfile, but if, by accident, a path is provided with many sub folders
+        # it just takes too long. So we check it upfront:
         if not os.path.exists(os.path.join(path, 'Dockerfile')):
             raise FCException(f'Dockerfile not found in directory: {os.path.abspath(path)}')
 
-        for line in client.api.build(path=path, tag=f"{image_name}:{tag}", rm=rm):
-            # "message" indicates an error, e.g.:
-            # b'{"message":"Cannot locate specified Dockerfile: Dockerfile"}\n'
-            _, _, err_msg = line.partition(b'"message":')
-            if err_msg != b'':
-                raise FCException(err_msg.decode().lstrip('"').rstrip().rstrip('"}'))
+        for entry in client.api.build(path=path, tag=f"{image_name}:{tag}", rm=rm, decode=True):
+            # Examples of stream entries, 'message' indicates error:
+            # {'stream': 'Step 2/11 : RUN apt-get update && apt-get install -y supervisor nginx'}
+            # {'message': 'Cannot locate specified Dockerfile: Dockerfile'}
+            if 'message' in entry:
+                raise FCException(entry['message'])
 
-            yield line
+            yield entry
     except docker.errors.DockerException as e:
         raise FCException(e)
 
@@ -102,8 +104,11 @@ def download(name: str, tag: str = "latest"):
     fc_name = fc_repo_name(name)
     client = get_docker_client()
     try:
-        for line in client.api.pull(repository=fc_name, tag=tag):
-            yield line
+        for entry in client.api.pull(repository=fc_name, tag=tag, stream=True, decode=True):
+            if 'error' in entry:
+                raise FCException(entry['error'])
+
+            yield entry
     except docker.errors.DockerException as e:
         raise FCException(e)
 
@@ -134,8 +139,14 @@ def publish(name: str, tag: str = "latest"):
         raise FCException(e)
 
     try:
-        for line in client.api.push(repository=fc_name, tag=tag):
-            yield line
+        for entry in client.api.push(repository=fc_name, tag=tag, stream=True, decode=True):
+            # Examples of stream entries:
+            # {'status': 'Waiting', 'progressDetail': {}, 'id': '38feb0548c7a'}
+            # {'errorDetail': {'message': 'unauthorized: authentication required'}, 'error': 'unauthorized: authentication required'}
+            if 'error' in entry:
+                raise FCException(entry['error'])
+
+            yield entry
     except docker.errors.DockerException as e:
         raise FCException(e)
 
