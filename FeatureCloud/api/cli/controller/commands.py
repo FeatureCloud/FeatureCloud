@@ -55,9 +55,14 @@ def stop(name: str) -> None:
 @controller.command('logs')
 @click.argument('name', type=str, default=commands.DEFAULT_CONTROLLER_NAME, nargs=1, required=False)
 @click.option('--tail', help='View the tail of controller logs. (e.g. featurecloud controller logs --tail=True)', default=False, required=False)
-@click.option('--log-level', default='debug', help='Log level filter. Will filter more sever errors than specified (e.g. featurecloud controller logs  --log-level=debug).')
+@click.option('--log-level', default='debug', help='Log level filter. Will filter more sever errors than specified (e.g. featurecloud controller logs  --log-level=debug).', required=False)
 def logs(name: str, log_level: str, tail: bool) -> None:
-    """Display the logs for the controller instance. Optional parameter: controller name (e.g. featurecloud controller logs fc-controller)"""
+    """Display the logs for the controller instance.
+
+    NAME is the controller instance name.
+
+    Example: featurecloud controller logs my-fc-controller
+    """
 
     try:
         for line in commands.logs(name, tail, log_level):
@@ -69,7 +74,12 @@ def logs(name: str, log_level: str, tail: bool) -> None:
 @controller.command('status')
 @click.argument('name', type=str, default=commands.DEFAULT_CONTROLLER_NAME, nargs=1, required=False)
 def status(name: str) -> None:
-    """Display general status of the controller. Optional parameter: controller name (e.g. featurecloud controller status fc-controller)"""
+    """Display general status of the controller.
+
+    NAME is the controller instance name.
+
+    Example: featurecloud controller status my-fc-controller
+    """
 
     try:
         container = commands.status(name)
