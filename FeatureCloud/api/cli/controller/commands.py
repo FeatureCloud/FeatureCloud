@@ -5,20 +5,23 @@ from FeatureCloud.api.imp.exceptions import FCException
 
 from FeatureCloud.api.imp.controller import commands
 
+
 @click.group("controller")
 def controller() -> None:
     """Controller start/stop. Obtain general information about the controller."""
 
 
 @controller.command('start')
-@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
+@click.argument('name', type=str, default=commands.DEFAULT_CONTROLLER_NAME, nargs=1, required=False)
 @click.option('--port', default=8000, help='Controller port number. Optional parameter (e.g. --port=8000).', required=False)
 @click.option('--data-dir', default='data', help='Controller data directory. Optional parameter (e.g. --data-dir=./data).', required=False)
-def start(what: tuple, port: int, data_dir: str) -> None:
-    """Start controller. Optional parameter: controller name (e.g. featurecloud controller start my-fc-controller)"""
-    name = commands.DEFAULT_CONTROLLER_NAME
-    if len(what) > 0:
-        name = what[0]
+def start(name: str, port: int, data_dir: str) -> None:
+    """Start a controller instance.
+
+    NAME is the controller instance name
+
+    Example: featurecloud controller start my-fc-controller
+    """
     try:
         commands.start(name, port, data_dir)
         click.echo(f'Started controller: {name}')
@@ -30,12 +33,14 @@ def start(what: tuple, port: int, data_dir: str) -> None:
 
 
 @controller.command('stop')
-@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
-def stop(what: tuple) -> None:
-    """Stop controller instance. Optional parameter: controller name (e.g. featurecloud controller stop fc-controller)"""
-    name = commands.DEFAULT_CONTROLLER_NAME
-    if len(what) > 0:
-        name = what[0]
+@click.argument('name', type=str, default=commands.DEFAULT_CONTROLLER_NAME, nargs=1, required=False)
+def stop(name: str) -> None:
+    """Stop controller instance.
+
+    NAME is the controller instance name
+
+    Example: featurecloud controller stop my-fc-controller
+    """
 
     try:
         result = commands.stop(name)
@@ -48,14 +53,11 @@ def stop(what: tuple) -> None:
 
 
 @controller.command('logs')
+@click.argument('name', type=str, default=commands.DEFAULT_CONTROLLER_NAME, nargs=1, required=False)
 @click.option('--tail', help='View the tail of controller logs. (e.g. featurecloud controller logs --tail=True)', default=False, required=False)
 @click.option('--log-level', default='debug', help='Log level filter. Will filter more sever errors than specified (e.g. featurecloud controller logs  --log-level=debug).')
-@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
-def logs(what: tuple, log_level: str, tail: bool) -> None:
+def logs(name: str, log_level: str, tail: bool) -> None:
     """Display the logs for the controller instance. Optional parameter: controller name (e.g. featurecloud controller logs fc-controller)"""
-    name = commands.DEFAULT_CONTROLLER_NAME
-    if len(what) > 0:
-        name = what[0]
 
     try:
         for line in commands.logs(name, tail, log_level):
@@ -65,12 +67,9 @@ def logs(what: tuple, log_level: str, tail: bool) -> None:
 
 
 @controller.command('status')
-@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
-def status(what: tuple) -> None:
+@click.argument('name', type=str, default=commands.DEFAULT_CONTROLLER_NAME, nargs=1, required=False)
+def status(name: str) -> None:
     """Display general status of the controller. Optional parameter: controller name (e.g. featurecloud controller status fc-controller)"""
-    name = commands.DEFAULT_CONTROLLER_NAME
-    if len(what) > 0:
-        name = what[0]
 
     try:
         container = commands.status(name)

@@ -39,7 +39,7 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
 
 
 @app.command('download')
-@click.argument('name', type=str, default=None, nargs=1, required=False)
+@click.argument('name', type=str, default=None, nargs=1, required=True)
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
 def download(name: str, tag: str):
     try:
@@ -51,7 +51,7 @@ def download(name: str, tag: str):
 
 
 @app.command('publish')
-@click.argument('name', type=str, default=None, nargs=1, required=False)
+@click.argument('name', type=str, default=None, nargs=1, required=True)
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
 def publish(name: str, tag: str):
     try:
@@ -63,7 +63,7 @@ def publish(name: str, tag: str):
 
 
 @app.command('remove')
-@click.argument('name', type=str, default=None, nargs=1, required=False)
+@click.argument('name', type=str, default=None, nargs=1, required=True)
 def remove(name: str):
     try:
         commands.remove(**{k: v for k, v in locals().items() if v})
