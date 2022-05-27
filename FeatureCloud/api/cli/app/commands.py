@@ -11,11 +11,23 @@ def app() -> None:
     """app related commands"""
 
 
+# @TODO Create a list available templates function
+
 @app.command('new')
 @click.argument('name', type=click.Path(), nargs=1)
 @click.argument('directory', type=click.Path(), nargs=1, required=False)
-@click.option('--template-name', help='You can specify other template')
+@click.option('--template-name', help='You can specify a template. If empty, an empty project will be created (e.g. featurecloud app new my-new-app . --template-name=featurecloud.ai/template_app_name).')
 def new(name: click.Path, directory: click.Path, template_name: str):
+    '''
+    Create new app
+
+    NAME is the app name
+
+    DIRECTORY is the directory where your app will be created
+
+    Example: featurecloud app new my-new-app .
+
+    '''
     try:
         path = commands.new(**{k: v for k, v in locals().items() if v})
         click.echo(f'Path to your app: {os.path.abspath(path)}')
@@ -30,6 +42,20 @@ def new(name: click.Path, directory: click.Path, template_name: str):
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
 @click.argument('rm', type=bool, default=True, nargs=1, required=False)
 def build(path: click.Path, image_name: str, tag: str, rm: bool):
+    '''
+
+    Build app
+
+    PATH is the location of your app
+
+    IMAGE_NAME is the Docker image name
+
+    TAG the Docker tag for the version to be built
+
+    RM remove intermediary containers
+
+    Example: featurecloud app build ./my-new-app my-new-app first_version True
+    '''
     try:
         result = commands.build(**{k: v for k, v in locals().items() if v})
         for _ in tqdm.tqdm(result, desc=f"Building {image_name}:{tag} ..."):
@@ -42,6 +68,15 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
 @click.argument('name', type=str, default=None, nargs=1, required=True)
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
 def download(name: str, tag: str):
+    """
+    Download an image from FeatureCloud repository
+
+    NAME is the image name
+
+    TAG is the image tag
+
+    Example: featurecloud app download my_app:latest
+    """
     try:
         result = commands.download(**{k: v for k, v in locals().items() if v})
         for _ in tqdm.tqdm(result, desc=f"Downloading {name}:{tag} ..."):
@@ -54,6 +89,18 @@ def download(name: str, tag: str):
 @click.argument('name', type=str, default=None, nargs=1, required=True)
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
 def publish(name: str, tag: str):
+    """
+    Publish an app in FeatureCloud repository
+
+    NAME is the image name
+
+    TAG is the image tag
+
+    Example: featurecloud app publish my-app:latest
+
+    The app should be created and the image name set in the App Store prior publishing
+
+    """
     try:
         result = commands.publish(**{k: v for k, v in locals().items() if v})
         for _ in tqdm.tqdm(result, desc=f"Uploading {name}:{tag} ..."):
@@ -67,6 +114,13 @@ def publish(name: str, tag: str):
 @app.command('remove')
 @click.argument('name', type=str, default=None, nargs=1, required=True)
 def remove(name: str):
+    """
+    Delete an image from the local repository. This command will not delete the app from FeatureCloud App Store.
+
+    NAME is the image name to be deleted
+
+    Example: featurecloud app delete featurecloud.ai/my-app
+    """
     try:
         commands.remove(**{k: v for k, v in locals().items() if v})
         click.echo(f'Image {name} removed')
