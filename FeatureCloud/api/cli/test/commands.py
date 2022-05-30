@@ -1,6 +1,8 @@
 import os
 
 import click
+import requests
+
 from FeatureCloud.api.imp.exceptions import FCException
 
 from FeatureCloud.api.imp.test import commands
@@ -51,6 +53,10 @@ def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: s
         result = commands.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval,
                                 download_results)
         click.echo(f"Test id={result} started")
+    except requests.exceptions.InvalidSchema:
+        click.echo(f'No connection adapters were found for {controller_host}')
+    except requests.exceptions.MissingSchema:
+        click.echo(f' Invalid URL {controller_host}: No scheme supplied. Perhaps you meant http://{controller_host}?')
     except FCException as e:
         click.echo(f'Error: {e}')
 
@@ -65,25 +71,45 @@ def stop(controller_host: str, test_id: str or int):
     try:
         result = commands.stop(controller_host, test_id)
         click.echo(f"Test id={result} stopped")
+    except requests.exceptions.InvalidSchema:
+        click.echo(f'No connection adapters were found for {controller_host}')
+    except requests.exceptions.MissingSchema:
+        click.echo(f' Invalid URL {controller_host}: No scheme supplied. Perhaps you meant http://{controller_host}?')
     except FCException as e:
         click.echo(f'Error: {e}')
 
 
 @test.command('delete')
 @click.option('--controller-host', default='http://localhost:8000',
-              help='Address of your running controller instance.  (e.g. featurecloud test delete all --controller-host=http://localhost:8000)',
-              required=True)
+              help='Address of your running controller instance.  (e.g. featurecloud test delete all --controller-host=http://localhost:8000)',)
 @click.option('--test-id', help='The test id of the test to be deleted. The test id is returned by the start command.'
                                 'To delete all tests omit this option and use "delete all".')
-@click.argument('what', nargs=-1)  # using variadic arguments to make it not required
-def delete(controller_host: str, test_id: str or int, what: tuple):
-    '''Deletes test with specified id or alternatively, deletes all tests with optional parameter (e.g. featurecloud test delete all).'''
+@click.argument('all', type=str, nargs=1, required=False)
+def delete(controller_host: str, test_id: str or int, all: str):
+    '''
+    Deletes test with specified id or alternatively, deletes all tests
+
+     ALL - delete all tests
+
+     Examples:
+
+         featurecloud test delete --test-id=1
+
+         featurecloud test delete all
+    '''
     try:
-        result = commands.delete(controller_host, test_id, what)
-        if result.lower() == 'all':
-            click.echo(f"All tests deleted")
+        result = commands.delete(controller_host, test_id, all)
+        if all is not None:
+            if all.lower() == 'all':
+                click.echo(f"All tests deleted")
+            else:
+                click.echo(f'Wrong parameter {all}')
         else:
             click.echo(f"Test id={result} deleted")
+    except requests.exceptions.InvalidSchema:
+        click.echo(f'No connection adapters were found for {controller_host}')
+    except requests.exceptions.MissingSchema:
+        click.echo(f' Invalid URL {controller_host}: No scheme supplied. Perhaps you meant http://{controller_host}?')
     except FCException as e:
         click.echo(f'Error: {e}')
 
@@ -101,6 +127,10 @@ def list(controller_host: str, format: str):
             click.echo('No tests available')
         else:
             click.echo(result)
+    except requests.exceptions.InvalidSchema:
+        click.echo(f'No connection adapters were found for {controller_host}')
+    except requests.exceptions.MissingSchema:
+        click.echo(f' Invalid URL {controller_host}: No scheme supplied. Perhaps you meant http://{controller_host}?')
     except FCException as e:
         click.echo(f'Error: {e}')
 
@@ -116,6 +146,10 @@ def info(controller_host: str, test_id: str or int, format: str):
     try:
         result = commands.info(controller_host, test_id, format)
         click.echo(result)
+    except requests.exceptions.InvalidSchema:
+        click.echo(f'No connection adapters were found for {controller_host}')
+    except requests.exceptions.MissingSchema:
+        click.echo(f' Invalid URL {controller_host}: No scheme supplied. Perhaps you meant http://{controller_host}?')
     except FCException as e:
         click.echo(f'Error: {e}')
 
@@ -131,6 +165,10 @@ def traffic(controller_host: str, test_id: str or int, format: str):
     try:
         result = commands.traffic(controller_host, test_id, format)
         click.echo(result)
+    except requests.exceptions.InvalidSchema:
+        click.echo(f'No connection adapters were found for {controller_host}')
+    except requests.exceptions.MissingSchema:
+        click.echo(f' Invalid URL {controller_host}: No scheme supplied. Perhaps you meant http://{controller_host}?')
     except FCException as e:
         click.echo(f'Error: {e}')
 
@@ -150,6 +188,10 @@ def logs(controller_host: str, test_id: str or int, instance_id: str or int, fro
         for line in result:
             log_lines += str(line) + os.linesep
         click.echo(log_lines)
+    except requests.exceptions.InvalidSchema:
+        click.echo(f'No connection adapters were found for {controller_host}')
+    except requests.exceptions.MissingSchema:
+        click.echo(f' Invalid URL {controller_host}: No scheme supplied. Perhaps you meant http://{controller_host}?')
     except FCException as e:
         click.echo(f'Error: {e}')
 
