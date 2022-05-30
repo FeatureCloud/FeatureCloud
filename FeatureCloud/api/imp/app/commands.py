@@ -2,6 +2,7 @@ import git
 import os
 from urllib.parse import urljoin
 import docker
+from docker import DockerClient
 
 from git import GitError
 
@@ -136,12 +137,14 @@ def publish(name: str, tag: str = "latest"):
     client = get_docker_client()
 
     try:
-        client.images.get(name).tag(fc_name)
+        local_repo = f'{name}:{tag}'
+        registry_repo = f'{fc_name}:{tag}'
+        client.images.get(local_repo).tag(registry_repo)
     except docker.errors.DockerException as e:
         raise FCException(e)
 
     try:
-        for entry in client.api.push(repository=fc_name, tag=tag, stream=True, decode=True):
+        for entry in client.api.push(repository=registry_repo, stream=True, decode=True):
             # Examples of stream entries:
             # {'status': 'Waiting', 'progressDetail': {}, 'id': '38feb0548c7a'}
             # {'errorDetail': {'message': 'unauthorized: authentication required'}, 'error': 'unauthorized: authentication required'}
@@ -168,8 +171,25 @@ def remove(name: str, tag: str = "latest"):
     """
     to_find = name if tag == 'all' else f'{name}:{tag}'
     client = get_docker_client()
-    removed = []
+    removed = remove_images(client, to_find)
 
+    if tag == 'all':
+        # search also for local images containing the FC repository name
+        to_find = fc_repo_name(name)
+        removed = removed + remove_images(client, to_find)
+
+    return removed
+
+
+def fc_repo_name(name: str) -> str:
+    if not name.startswith(FC_REPO_PREFIX):
+        return f'{FC_REPO_PREFIX}{name}'
+
+    return name
+
+
+def remove_images(client: DockerClient, to_find: str):
+    removed = []
     for img in client.images.list(to_find):
         # one image id may have several tags
         for img_tag in img.tags:
@@ -180,10 +200,3 @@ def remove(name: str, tag: str = "latest"):
         removed = removed + img.tags
 
     return removed
-
-
-def fc_repo_name(name):
-    if not name.startswith(FC_REPO_PREFIX):
-        return f'{FC_REPO_PREFIX}{name}'
-
-    return name
