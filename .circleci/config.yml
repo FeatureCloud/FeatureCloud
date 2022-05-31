@@ -1,14 +1,9 @@
 version: 2.1
-orbs:
-  node: circleci/node@4.7.0
 jobs:
-  build:
-    executor:
-      name: node/default
-      tag: '10.4'
+  lin_build:
+    machine: 
+      image: ubuntu-2004:202010-01 
+
     steps:
       - checkout
-      - node/with-cache:
-          steps:
-            - run: npm install
-      - run: npm run test
+      - run: sh rebuild.sh
