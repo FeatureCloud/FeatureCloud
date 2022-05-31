@@ -1,4 +1,8 @@
 version: 2.1
+
+orbs:
+    win: circleci/windows@2.2.0
+
 jobs:
   lin_build:
     machine: 
@@ -8,11 +12,40 @@ jobs:
       - checkout
       - run: python3 setup.py sdist
       - run: python3 -m pip install dist/FeatureCloud-0.0.16.tar.gz
+      - run: featurecloud controller --help
       - run: featurecloud controller start
       - run: featurecloud controller status
       - run: featurecloud controller stop
+
+  mac_build:
+    macos: 
+      xcode: 12.5.1
+
+    steps:
+      - checkout
+      - run: python3 setup.py sdist
+      - run: python3 -m pip install dist/FeatureCloud-0.0.16.tar.gz
+      - run: featurecloud controller --help
+      - run: featurecloud controller start
+      - run: featurecloud controller status
+      - run: featurecloud controller stop
+
+  win_build:
+    executor: win/server-2022
+
+    steps:
+      - checkout
+      - run: python3 setup.py sdist
+      - run: python3 -m pip install dist/FeatureCloud-0.0.16.tar.gz
+      - run: featurecloud controller --help
+      - run: featurecloud controller start
+      - run: featurecloud controller status
+      - run: featurecloud controller stop
+
 workflows:
   version: 2
   build-all:
     jobs:
       - lin_build
+      - mac_build
+      - win_build
