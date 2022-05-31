@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-    win: circleci/windows@2.2.0
+    win: circleci/windows@4.1.1
 
 jobs:
   lin_build:
@@ -35,8 +35,9 @@ jobs:
 
     steps:
       - checkout
-      - run: python3 setup.py sdist
-      - run: python3 -m pip install dist/FeatureCloud-0.0.16.tar.gz
+      - run: choco install python
+      - run: python setup.py sdist
+      - run: python -m pip install dist/FeatureCloud-0.0.16.tar.gz
       - run: featurecloud controller --help
       - run: featurecloud controller start
       - run: featurecloud controller status
