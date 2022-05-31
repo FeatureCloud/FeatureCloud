@@ -31,7 +31,7 @@ jobs:
       - run: featurecloud controller stop
 
   win_build:
-    executor: win/server-2022
+    executor: win/default
 
     steps:
       - checkout
