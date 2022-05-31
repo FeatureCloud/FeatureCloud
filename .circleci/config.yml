@@ -9,6 +9,6 @@ jobs:
       - run: sh rebuild.sh
 workflows:
   version: 2
-    build-all:
-      jobs:
-        - lin_build
+  build-all:
+    jobs:
+      - lin_build
