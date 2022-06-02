@@ -30,7 +30,6 @@ def new(name: click.Path, directory: click.Path, template_name: str):
     """
     try:
         path = commands.new(**{k: v for k, v in locals().items() if v})
-        path = commands.new(**{k: v for k, v in locals().items() if v})
         click.echo(f'Path to your app: {os.path.abspath(path)}')
         click.echo('Enjoy!')
     except FCException as e:
