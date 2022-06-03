@@ -16,16 +16,17 @@ def app() -> None:
 @app.command('new')
 @click.argument('name', type=click.Path(), nargs=1)
 @click.argument('directory', type=click.Path(), nargs=1, required=False)
-@click.option('--template-name', help='You can specify a template. If empty, an empty project will be created (e.g. featurecloud app new my-new-app . --template-name=featurecloud.ai/template_app_name).')
+@click.option('--template-name', help='You can specify a template from the available ones: app-blank, app-dice, app-round. '
+                                      'If not provided, an empty project will be created using the app-blank template.')
 def new(name: click.Path, directory: click.Path, template_name: str):
     """
     Create new app
 
     NAME is the app name
 
-    DIRECTORY is the directory where your app will be created
+    DIRECTORY is the directory where your app will be created (in a subdirectory NAME)
 
-    Example: featurecloud app new my-new-app .
+    Example: featurecloud app new my-new-app . --template-name=app-blank
 
     """
     try:

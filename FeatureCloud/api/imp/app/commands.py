@@ -35,6 +35,10 @@ def new(name: str, directory: str = '.', template_name: str = 'app-blank') -> st
     -------
          FeatureCloud.api.imp.exceptions.FCException
     """
+
+    if not template_name.startswith('app-'):
+        raise FCException(f'{template_name} is not a valid template. Please see the help for available templates')
+
     try:
         app_path = os.path.join(directory, name)
         repo = git.Repo.clone_from(create_link(template_name), app_path)
