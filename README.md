@@ -37,8 +37,19 @@ Commands to run or stop the FC controller:
 Basic commands to interact with FC controller regarding the creating apps and
 * new: to create a new app in a specific directory
   * template-name:  URL of a specific sample app provided on FC GitHub repositories 
-* build(coming soon): to build docker image  
-* publish(coming soon): to push the docker image to the FC docker repository(FC AI-store)
+* build: to build docker image for the app
+  * path: to the directory containing the Dockerfile
+  * image_name
+  * tag
+  * rm: (bool) if True, remove intermediate containers
+* publish: to push the docker image to the FC docker repository(FC AI-store)
+  * name: image name
+  * tag
+* Download a given docker image from FeatureCloud.ai docker repo.
+  * name: image name
+  * tag
+* remove: Delete docker image from local hard drive.
+  * name: image name
 
 #### test 
 Commands to manage app(or test workflow of apps) execution:
