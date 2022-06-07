@@ -35,8 +35,8 @@ jobs:
 
     steps:
       - checkout
-      - run: choco install python
-      - run: choco install docker-desktop
+      - run: choco install python3 --version=3.8
+        #- run: choco install docker-desktop
       - run: python setup.py sdist
       - run: python -m pip install dist/FeatureCloud-0.0.16.tar.gz
       - run: featurecloud controller --help
