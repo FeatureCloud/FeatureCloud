@@ -1,8 +1,5 @@
 version: 2.1
 
-orbs:
-    win: circleci/windows@4.1.1
-
 jobs:
   lin_build:
     machine: 
@@ -25,24 +22,9 @@ jobs:
       - checkout
       - run: python3 setup.py sdist
       - run: python3 -m pip install dist/FeatureCloud-0.0.16.tar.gz
-      - run: open --background -a Docker
+      - run: brew install docker
+      - run: open /Applications/Docker.app
       - run: featurecloud controller --help
-      - run: featurecloud controller start
-      - run: featurecloud controller status
-      - run: featurecloud controller stop
-
-  win_build:
-    executor: win/default
-
-    steps:
-      - checkout
-      - run: choco install python3 --version=3.8
-      - run: docker --version
-      - run: choco install docker
-      - run: python setup.py sdist
-      - run: python -m pip install dist/FeatureCloud-0.0.16.tar.gz
-      - run: featurecloud controller --help
-      - run: docker pull featurecloud.ai/controller
       - run: featurecloud controller start
       - run: featurecloud controller status
       - run: featurecloud controller stop
@@ -53,4 +35,3 @@ workflows:
     jobs:
       - lin_build
       - mac_build
-      - win_build
