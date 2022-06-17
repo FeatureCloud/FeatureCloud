@@ -44,11 +44,11 @@ def stop(controller_host: str, test_id: str or int):
         raise FCException(result['detail'])
 
 
-def delete(controller_host: str, test_id: str or int, what: tuple):
+def delete(controller_host: str, test_id: str or int, del_all: str):
     if not controller.is_online(controller_host):
         raise ControllerOffline(controller_host)
 
-    if test_id is not None and len(what) == 0:
+    if test_id is not None and del_all is None:
         success, result = controller.delete_test(controller_host, test_id)
 
         if success:
@@ -56,8 +56,8 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
         else:
             raise FCException(result['detail'])
 
-    elif test_id is None and len(what) > 0:
-        if what[0].lower() == 'all':
+    elif test_id is None and len(del_all) > 0:
+        if del_all.lower() == 'all':
             success, result = controller.delete_tests(controller_host)
 
             if success:
@@ -65,7 +65,7 @@ def delete(controller_host: str, test_id: str or int, what: tuple):
             else:
                 raise FCException(result['detail'])
         else:
-            raise FCException(f'Unsupported argument {what[0]}')
+            raise FCException(f'Unsupported argument {del_all}')
 
     else:
         raise FCException('Wrong combination of parameters. To delete a single test use option --test-id. To delete all tests use the "all" argument.')

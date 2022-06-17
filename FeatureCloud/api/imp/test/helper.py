@@ -32,4 +32,9 @@ def json_to_dataframe(json, single_entry: bool = False, default_column: str = 'i
         df.finishedAt = pd.to_datetime(df.finishedAt).apply(lambda x: str(x).split(".")[0])
     except Exception:
         pass
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', None)
+    pd.set_option('display.max_colwidth', None)
+
     return df

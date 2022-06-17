@@ -3,8 +3,10 @@ import time
 import docker
 import os
 
-from FeatureCloud.api.imp.exceptions import DockerNotAvailable, FCException, ContainerNotFound
+from FeatureCloud.api.imp.exceptions import FCException, ContainerNotFound
 from FeatureCloud.api.imp.test.helper import http
+
+from FeatureCloud.api.imp.util import getcwd_fslash, get_docker_client
 
 CONTROLLER_IMAGE = "featurecloud.ai/controller"
 CONTROLLER_LABEL = "FCControllerLabel"
@@ -15,25 +17,7 @@ LOG_FETCH_INTERVAL = 3  # seconds
 LOG_LEVEL_CHOICES = ['debug', 'info', 'warn', 'error', 'fatal']
 
 
-def get_docker_client():
-    return docker.from_env()
-
-
-def check_docker_status():
-    """Checks whether all docker-related components have been installed."""
-    try:
-        client = get_docker_client()
-        client.version()
-    except docker.errors.DockerException:
-        raise DockerNotAvailable()
-
-
-def check_controller_prerequisites():
-    check_docker_status()
-
-
 def start(name: str, port: int, data_dir: str):
-    check_controller_prerequisites()
     client = get_docker_client()
 
     data_dir = data_dir if data_dir else DEFAULT_DATA_DIR
@@ -63,8 +47,8 @@ def start(name: str, port: int, data_dir: str):
         raise FCException(e)
 
     cont_name = name if name else DEFAULT_CONTROLLER_NAME
-    # forward slash works on all platforms (os.getcwd() result contains backslash on Windows)
-    base_dir = os.getcwd().replace("\\", "/")
+    # forward slash works on all platforms
+    base_dir = getcwd_fslash()
 
     try:
         client.containers.run(
@@ -82,7 +66,6 @@ def start(name: str, port: int, data_dir: str):
 
 
 def stop(name: str):
-    check_controller_prerequisites()
     client = get_docker_client()
 
     if not name:
@@ -101,7 +84,6 @@ def stop(name: str):
 
 
 def prune_controllers():
-    check_controller_prerequisites()
     client = get_docker_client()
 
     try:
@@ -111,7 +93,6 @@ def prune_controllers():
 
 
 def logs(name: str, tail: bool, log_level: str):
-    check_controller_prerequisites()
     client = get_docker_client()
 
     # get controller address
@@ -146,7 +127,6 @@ def logs(name: str, tail: bool, log_level: str):
 
 
 def status(name: str):
-    check_controller_prerequisites()
     client = get_docker_client()
     try:
         return client.containers.get(name)
@@ -157,7 +137,6 @@ def status(name: str):
 
 
 def ls():
-    check_controller_prerequisites()
     client = get_docker_client()
     try:
         return client.containers.list(filters={'label': [CONTROLLER_LABEL]})

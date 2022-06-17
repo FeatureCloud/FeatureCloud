@@ -16,6 +16,7 @@ FeatureCloud/venv/*
 FeatureCloud.egg-info
 FeatureCloud.egg-info/*
 FeatureCloud/venv
+**/.DS_Store
 build
 dist
 
