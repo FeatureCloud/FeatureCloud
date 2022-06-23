@@ -1,5 +1,6 @@
 import os.path
 from os import listdir
+from pathlib import Path
 import zipfile
 from time import sleep
 from FeatureCloud.workflow.controller import Controller
@@ -89,7 +90,7 @@ class TestApp(Controller):
 
         """
         zip_files = [f for f in listdir(self.results_path) if f.endswith(".zip")]
-        os.makedirs(self.results_path, exist_ok=True)
+        Path(self.results_path).mkdir(exist_ok=True, parents=True)
         if len(zip_files) > 1:
             print(f"Extracting the results of {self.app_image} ...")
             for zip_file in zip_files:
@@ -147,7 +148,7 @@ class TestApp(Controller):
                     print(f"Delete {self.results_path}/{zip_file}")
                     os.remove(f"{self.results_path}/{zip_file}")
         else:
-            os.mkdir(self.results_path)
+            Path(self.results_path).mkdir(exist_ok=True, parents=True)
 
     def create_paths(self, ctrl_data_path: str, ctrl_test_path: str):
         """ Generate paths to directories containing the app's data(for each client)
