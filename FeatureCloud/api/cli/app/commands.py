@@ -22,7 +22,7 @@ def new(name: click.Path, directory: click.Path, template_name: str):
     """
     Create new app
 
-    NAME is the app name
+    NAME is the app name. Because of Docker naming restrictions, it should be in lowercase.
 
     DIRECTORY is the directory where your app will be created (in a subdirectory NAME)
 
@@ -30,7 +30,14 @@ def new(name: click.Path, directory: click.Path, template_name: str):
 
     """
     try:
-        path = commands.new(**{k: v for k, v in locals().items() if v})
+        arguments = locals().items()
+        for key, value in arguments:
+            if key == 'name':
+                value_lowercase = value.lower()
+                if value != value_lowercase:
+                    click.echo("Uppercase letters are not allowed in app name. The new app name is: " + value_lowercase)
+
+        path = commands.new(**{k: v for k, v in arguments if v})
         click.echo(f'Path to your app: {os.path.abspath(path)}')
         click.echo('Enjoy!')
     except FCException as e:
@@ -49,7 +56,7 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
 
     PATH is the location of your app
 
-    IMAGE_NAME is the Docker image name
+    IMAGE_NAME is the Docker image name. Because of Docker naming restrictions, it should be in lowercase.
 
     TAG the Docker tag for the version to be built. Default: 'latest'.
 
@@ -58,8 +65,14 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
     Example: featurecloud app build ./my-new-app my-new-app first_version True
     """
     try:
-        result = commands.build(**{k: v for k, v in locals().items() if v})
-        for _ in tqdm.tqdm(result, desc=f"Building {image_name}:{tag} ..."):
+        arguments = locals().items()
+        for key, value in arguments:
+            if key == 'image_name':
+                value_lowercase = value.lower()
+                if value != value_lowercase:
+                    click.echo("Uppercase letters are not allowed in image name. The new image name is: " + value_lowercase)
+        result = commands.build(**{k: v for k, v in arguments if v})
+        for _ in tqdm.tqdm(result, desc=f"Building {image_name.lower()}:{tag} ..."):
             pass
     except FCException as e:
         click.echo(f'Error: {e}')
