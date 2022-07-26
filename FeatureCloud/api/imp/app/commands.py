@@ -40,7 +40,7 @@ def new(name: str, directory: str = '.', template_name: str = 'app-blank') -> st
         raise FCException(f'{template_name} is not a valid template. Please see the help for available templates')
 
     try:
-        app_path = os.path.join(directory, name)
+        app_path = os.path.join(directory, name.lower())
         repo = git.Repo.clone_from(create_link(template_name), app_path)
         repo.delete_remote('origin')
         return app_path
@@ -79,7 +79,7 @@ def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str 
         if not os.path.exists(os.path.join(path, 'Dockerfile')):
             raise FCException(f'Dockerfile not found in directory: {os.path.abspath(path)}')
 
-        for entry in client.api.build(path=path, tag=f"{image_name}:{tag}", rm=rm, decode=True):
+        for entry in client.api.build(path=path, tag=f"{image_name.lower()}:{tag}", rm=rm, decode=True):
             # Examples of stream entries, 'message' indicates error:
             # {'stream': 'Step 2/11 : RUN apt-get update && apt-get install -y supervisor nginx'}
             # {'message': 'Cannot locate specified Dockerfile: Dockerfile'}
