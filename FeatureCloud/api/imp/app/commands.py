@@ -3,11 +3,13 @@ import os
 from urllib.parse import urljoin
 import docker
 from docker import DockerClient
-
+import sys
 from git import GitError
 
 from FeatureCloud.api.imp.exceptions import FCException
 from FeatureCloud.api.imp.util import getcwd_fslash, get_docker_client
+import pydot
+import importlib
 
 FC_REPO_PREFIX = "featurecloud.ai/"
 
@@ -204,3 +206,51 @@ def remove_images(client: DockerClient, to_find: str):
         removed = removed + img.tags
 
     return removed
+
+
+def plot_state_diagram(path: str, package: str, states: str, plot_name: str):
+    from FeatureCloud.app.engine.app import app
+    states = list(filter(None, states.split(',')))
+    sys.path.append(path)
+    if "/" in package:
+        sub_pkg_path = path
+        for sub_pkg in package.split("/"):
+            sub_pkg_path += "/" + sub_pkg
+            sys.path.append(sub_pkg_path)
+    else:
+        sys.path.append(f"{path}/{package}")
+    for state in states:
+        print(state)
+        loader = importlib.machinery.SourceFileLoader(state, f"{path}/{package}/{state}.py")
+        spec = importlib.util.spec_from_loader(state, loader)
+        mymodule = importlib.util.module_from_spec(spec)
+        loader.exec_module(mymodule)
+    app.register()
+
+    graph = pydot.Dot('FeatureCloud State Diagram', graph_type='digraph', bgcolor='transparent')
+
+    for s in app.states:
+        state = app.states[s]
+        state_node = pydot.Node(state.name, label=state.name)
+        if state.coordinator and state.participant:
+            state_node.set('color', 'purple')
+        elif state.coordinator:
+            state_node.set('color', 'red')
+        elif state.participant:
+            state_node.set('color', 'blue')
+        if state.name == 'initial' or state.name == 'terminal':
+            state_node.set('peripheries', 2)
+        graph.add_node(state_node)
+
+    for t in app.transitions:
+        transition = app.transitions[t]
+        state_edge = pydot.Edge(transition[0].name, transition[1].name, label=t)
+        if transition[2] and transition[3]:
+            state_edge.set('color', 'purple')
+        elif transition[3]:
+            state_edge.set('color', 'red')
+        elif transition[2]:
+            state_edge.set('color', 'blue')
+        graph.add_edge(state_edge)
+
+    graph.write_png(f"{path}/{plot_name}.png")

@@ -16,8 +16,9 @@ def app() -> None:
 @app.command('new')
 @click.argument('name', type=click.Path(), nargs=1)
 @click.argument('directory', type=click.Path(), nargs=1, required=False)
-@click.option('--template-name', help='You can specify a template from the available ones: app-blank, app-dice, app-round. '
-                                      'If not provided, an empty project will be created using the app-blank template.')
+@click.option('--template-name',
+              help='You can specify a template from the available ones: app-blank, app-dice, app-round. '
+                   'If not provided, an empty project will be created using the app-blank template.')
 def new(name: click.Path, directory: click.Path, template_name: str):
     """
     Create new app
@@ -70,7 +71,8 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
             if key == 'image_name':
                 value_lowercase = value.lower()
                 if value != value_lowercase:
-                    click.echo("Uppercase letters are not allowed in image name. The new image name is: " + value_lowercase)
+                    click.echo(
+                        "Uppercase letters are not allowed in image name. The new image name is: " + value_lowercase)
         result = commands.build(**{k: v for k, v in arguments if v})
         for _ in tqdm.tqdm(result, desc=f"Building {image_name.lower()}:{tag} ..."):
             pass
@@ -121,7 +123,8 @@ def publish(name: str, tag: str):
             pass
     except FCException as e:
         if str(e).find("authentication required") > -1:
-            click.echo(f'Image cannot be pushed. A docker login is necessary to featurecloud.ai with user credentials or the app is inexistent in Featurecloud AI Store. In this case please create an app in AI Store with the specified image name.')
+            click.echo(
+                f'Image cannot be pushed. A docker login is necessary to featurecloud.ai with user credentials or the app is inexistent in Featurecloud AI Store. In this case please create an app in AI Store with the specified image name.')
         click.echo(f'Error: {e}')
 
 
@@ -144,5 +147,28 @@ def remove(name: str, tag: str):
             click.echo(f'No image found')
         else:
             click.echo(f'Removed image(s): {",".join(result)}')
+    except FCException as e:
+        click.echo(f'Error: {e}')
+
+
+@app.command('plot')
+@click.argument('path', type=click.Path(), default=".", required=False)
+@click.argument('package', type=str, default="", nargs=1, required=False)
+@click.option('--states', help='python files containing the states seperated by comma')
+@click.option('--plot_name', default="state_diagram", help='name of the plotted diagram file')
+def plot_diagram(path: str, package: str, states: str, plot_name: str):
+    """
+    Plot and store the state diagram of the app in the app directory
+
+    Path is the path to directory containing the app
+
+    Package is the relative path of the subpackage containing the states
+
+    Plot_name is the name of the plotted diagram file
+
+    Example: featurecloud app plot /home/my-app mystates --states states.py --plot_name myplot
+    """
+    try:
+        commands.plot_state_diagram(**{k: v for k, v in locals().items() if v})
     except FCException as e:
         click.echo(f'Error: {e}')
