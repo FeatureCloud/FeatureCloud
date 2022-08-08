@@ -209,7 +209,6 @@ def remove_images(client: DockerClient, to_find: str):
 
 
 def plot_state_diagram(path: str, package: str, states: str, plot_name: str):
-    from FeatureCloud.app.engine.app import app
     states = list(filter(None, states.split(',')))
     sys.path.append(path)
     if "/" in package:
@@ -219,12 +218,17 @@ def plot_state_diagram(path: str, package: str, states: str, plot_name: str):
             sys.path.append(sub_pkg_path)
     else:
         sys.path.append(f"{path}/{package}")
-    for state in states:
-        print(state)
-        loader = importlib.machinery.SourceFileLoader(state, f"{path}/{package}/{state}.py")
-        spec = importlib.util.spec_from_loader(state, loader)
-        mymodule = importlib.util.module_from_spec(spec)
-        loader.exec_module(mymodule)
+    if states == 'main':
+        from FeatureCloud.app.engine.app import app
+        main_py = load_module(states[0], f"{path}/{package}/{states[0]}.py")
+        app = main_py.app
+
+    else:
+        for state in states:
+            load_module(state, f"{path}/{package}/{state}.py")
+        from FeatureCloud.app.engine.app import app
+
+
     app.register()
 
     graph = pydot.Dot('FeatureCloud State Diagram', graph_type='digraph', bgcolor='transparent')
@@ -254,3 +258,11 @@ def plot_state_diagram(path: str, package: str, states: str, plot_name: str):
         graph.add_edge(state_edge)
 
     graph.write_png(f"{path}/{plot_name}.png")
+
+
+def load_module(module, path):
+    loader = importlib.machinery.SourceFileLoader(module, path)
+    spec = importlib.util.spec_from_loader(module, loader)
+    mymodule = importlib.util.module_from_spec(spec)
+    loader.exec_module(mymodule)
+    return mymodule

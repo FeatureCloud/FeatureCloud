@@ -153,8 +153,8 @@ def remove(name: str, tag: str):
 
 @app.command('plot')
 @click.argument('path', type=click.Path(), default=".", required=False)
-@click.argument('package', type=str, default="", nargs=1, required=False)
-@click.option('--states', help='python files containing the states seperated by comma')
+@click.option('--package', default=".", help='package/s which include/s the states')
+@click.option('--states', default='main', help='python files containing the states seperated by comma')
 @click.option('--plot_name', default="state_diagram", help='name of the plotted diagram file')
 def plot_diagram(path: str, package: str, states: str, plot_name: str):
     """
