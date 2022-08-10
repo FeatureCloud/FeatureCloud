@@ -21,4 +21,3 @@ workflows:
   build-all:
     jobs:
       - lin_build
-      - mac_build
