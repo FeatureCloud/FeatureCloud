@@ -17,7 +17,7 @@ class TestPipPackageTestCase(TestCase):
     def test_pip(self):
         self.start_controller()
         test_id = self.run_app('featurecloud.ai/dice_app')
-        self.check_logs(test_id)
+        self.check_logs(test_id.strip())
         self.stop_app(test_id)
         self.stop_controller()
         self.create_new_app()
