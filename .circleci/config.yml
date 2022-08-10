@@ -16,25 +16,6 @@ jobs:
       - run: python3 -m pip install pytest
       - run: pytest tests/test_pip_package.py
 
-  mac_build:
-    macos: 
-      xcode: 12.5.1
-
-    steps:
-      - checkout
-      - run: python3 setup.py sdist
-      - run: python3 -m pip install dist/FeatureCloud-0.0.16.tar.gz
-      - run: brew install wget
-      - run: wget https://desktop.docker.com/mac/main/amd64/Docker.dmg?utm_source=docker&utm_medium=webreferral&utm_campaign=docs-driven-download-mac-amd64
-      - run: sudo hdiutil attach Docker.dmg
-      - run: sudo /Volumes/Docker/Docker.app/Contents/MacOS/install
-      - run: sudo hdiutil detach /Volumes/Docker
-      - run: open /Applications/Docker.app
-      - run: featurecloud controller --help
-      - run: featurecloud controller start
-      - run: featurecloud controller status
-      - run: featurecloud controller stop
-
 workflows:
   version: 2
   build-all:
