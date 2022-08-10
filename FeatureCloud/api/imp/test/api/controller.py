@@ -35,7 +35,7 @@ def start_test(url: str, docker_image: str, directories: [], generic_directory: 
     if response.status_code == 200:
         return True, response.json()
     else:
-        return False, response.content
+        return False, response.json()
 
 
 def delete_test(url: str, test_id: str or int):
@@ -51,7 +51,7 @@ def stop_test(url: str, test_id: str or int):
     if response.status_code == 200:
         return True, response.content
     else:
-        return False, response.content
+        return False, response.json()
 
 
 def get_tests(url: str):
@@ -60,7 +60,7 @@ def get_tests(url: str):
     if response.status_code == 200:
         return True, response.json()
     else:
-        return False, response.content
+        return False, response.json()
 
 
 def delete_tests(url: str):
@@ -68,7 +68,7 @@ def delete_tests(url: str):
     if response.status_code == 200:
         return True, response.content
     else:
-        return False, response.content
+        return False, response.json()
 
 
 def get_test(url: str, test_id: str or int):

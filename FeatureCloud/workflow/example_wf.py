@@ -63,7 +63,7 @@ class WorkFlow(TestWorkFlow):
         print("Workflow execution starts ...")
         for i, app in enumerate(self.apps):
             app.clean_dirs(self.default_res_dir_name)
-            id, _ = app.start()
+            id = app.start()
             app.set_id(id)
             print(f"{app.app_image}(ID: {app.test_id}) is running ...")
             app.wait_until_finishes()

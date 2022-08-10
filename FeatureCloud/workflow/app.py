@@ -1,5 +1,6 @@
 import os.path
 from os import listdir
+from pathlib import Path
 import zipfile
 from time import sleep
 from FeatureCloud.workflow.controller import Controller
@@ -75,7 +76,7 @@ class TestApp(Controller):
         test_id: int
         """
         self.test_id = test_id
-        self.delete = partial(self.delete, test_id=self.test_id, what='')
+        self.delete = partial(self.delete, test_id=self.test_id, del_all=None)
 
     def extract_results(self, def_res_file: str):
         """ extract app's results zip files for all clients
@@ -89,7 +90,7 @@ class TestApp(Controller):
 
         """
         zip_files = [f for f in listdir(self.results_path) if f.endswith(".zip")]
-        os.makedirs(self.results_path, exist_ok=True)
+        Path(self.results_path).mkdir(exist_ok=True, parents=True)
         if len(zip_files) > 1:
             print(f"Extracting the results of {self.app_image} ...")
             for zip_file in zip_files:
@@ -121,9 +122,9 @@ class TestApp(Controller):
         """ Check either the app status is finished.
 
         """
-        df, msg = self.info(test_id=self.test_id, format='dataframe')
-        if df is None:
-            print(msg)
+        df = self.info(test_id=self.test_id, format='dataframe')
+        # if df is None:
+        #     print(msg)
         return df.status.values == "finished"
 
     def clean_dirs(self, def_re_dir: str):
@@ -147,7 +148,7 @@ class TestApp(Controller):
                     print(f"Delete {self.results_path}/{zip_file}")
                     os.remove(f"{self.results_path}/{zip_file}")
         else:
-            os.mkdir(self.results_path)
+            Path(self.results_path).mkdir(exist_ok=True, parents=True)
 
     def create_paths(self, ctrl_data_path: str, ctrl_test_path: str):
         """ Generate paths to directories containing the app's data(for each client)

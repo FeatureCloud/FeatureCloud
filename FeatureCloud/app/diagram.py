@@ -2,12 +2,10 @@
 
 import pydot
 
-import apps.examples.dice
-
-from engine.app import app
+from FeatureCloud.app.engine.app import app
 
 
-if __name__ == '__main__':
+def plot_states_diagram():
     app.register()
 
     graph = pydot.Dot('FeatureCloud State Diagram', graph_type='digraph', bgcolor='transparent')
@@ -36,4 +34,4 @@ if __name__ == '__main__':
             state_edge.set('color', 'blue')
         graph.add_edge(state_edge)
 
-    graph.write_png('output.png')
+    graph.write_png('state_diagram.png')
