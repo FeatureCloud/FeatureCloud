@@ -13,6 +13,8 @@ jobs:
       - run: featurecloud controller start
       - run: featurecloud controller status
       - run: featurecloud controller stop
+      - run: python3 -m pip install pytest
+      - run: pytest tests/test_pip_package.py
 
   mac_build:
     macos: 
