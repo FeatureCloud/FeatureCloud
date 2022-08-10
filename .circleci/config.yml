@@ -8,7 +8,7 @@ jobs:
     steps:
       - checkout
       - run: python3 setup.py sdist
-      - run: python3 -m pip install dist/FeatureCloud-0.0.16.tar.gz
+      - run: python3 -m pip install dist/FeatureCloud-0.0.17.tar.gz
       - run: featurecloud controller --help
       - run: featurecloud controller start
       - run: featurecloud controller status
