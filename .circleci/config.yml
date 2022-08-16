@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   lin_build:
     machine: 
-      image: circleci/classic:latest
+      image: ubuntu-2004:202010-01
 
     steps:
       - checkout
