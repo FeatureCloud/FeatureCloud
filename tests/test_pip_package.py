@@ -27,7 +27,6 @@ class TestPipPackageTestCase(TestCase):
         assert output.find(b'Started controller: fc-controller') > -1
 
     def run_app(self, app_name):
-        output = subprocess.check_output([f'docker pull {app_name}'], shell=True)
         output = subprocess.check_output([
             f'featurecloud test start --controller-host=http://localhost:8000 --client-dirs=. --generic-dir=. --app-image={app_name}'],
             shell=True)
@@ -37,8 +36,9 @@ class TestPipPackageTestCase(TestCase):
         return output.replace(' started', '')
 
     def check_logs(self, test_id):
-        check_logs_cmd = f' featurecloud test logs --instance-id=0 --from-row=0 --controller-host=http://localhost:8000 --test-id={test_id}'
+        check_logs_cmd = f' featurecloud test logs --instance-id=0 --from-row=0 --controller-host="http://localhost:8000" --test-id={test_id}'
         output = subprocess.check_output([check_logs_cmd], shell=True)
+        print(output)
         assert output.find(b'CRIT Supervisor is running as root') > -1
 
     def stop_app(self, test_id):
