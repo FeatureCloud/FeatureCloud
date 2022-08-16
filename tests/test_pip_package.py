@@ -27,6 +27,7 @@ class TestPipPackageTestCase(TestCase):
         assert output.find(b'Started controller: fc-controller') > -1
 
     def run_app(self, app_name):
+        output = subprocess.check_output([f'docker pull {app_name}'], shell=True)
         output = subprocess.check_output([
             f'featurecloud test start --controller-host=http://localhost:8000 --client-dirs=. --generic-dir=. --app-image={app_name}'],
             shell=True)
