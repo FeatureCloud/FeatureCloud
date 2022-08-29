@@ -646,7 +646,7 @@ class AppState(abc.ABC):
             determines the channel (stdout, stderr) or whether to trigger an exception
         """
 
-        self._app.log(f'[State: {self.name}] {msg}')
+        self._app.log(f'[State: {self.name}] {msg}', level)
 
 
 def app_state(name: str, role: Role = Role.BOTH, app_instance: Union[App, None] = None, **kwargs):
