@@ -417,11 +417,10 @@ class AppState(abc.ABC):
         name : str or None, default=None
             name of the transition
         """
-
-        if not name:
-            name = target
+        if name is None:
+            name = f'{self.name}_{target}'
         participant, coordinator = role.value
-        self._app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
+        self._app.register_transition(name, self.name, target, participant, coordinator)
 
     def aggregate_data(self, operation: SMPCOperation = SMPCOperation.ADD, use_smpc=False):
         """
