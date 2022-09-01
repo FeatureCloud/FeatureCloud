@@ -17,7 +17,7 @@ class TestPipPackageTestCase(TestCase):
     def test_pip(self):
         self.start_controller()
         test_id = self.run_app('featurecloud.ai/dice_app')
-        self.check_logs(test_id)
+        self.check_logs(test_id.strip())
         self.stop_app(test_id)
         self.stop_controller()
         self.create_new_app()
@@ -36,8 +36,9 @@ class TestPipPackageTestCase(TestCase):
         return output.replace(' started', '')
 
     def check_logs(self, test_id):
-        check_logs_cmd = f' featurecloud test logs --instance-id=0 --from-row=0 --controller-host=http://localhost:8000 --test-id={test_id}'
+        check_logs_cmd = f' featurecloud test logs --instance-id=0 --from-row=0 --controller-host="http://localhost:8000" --test-id={test_id}'
         output = subprocess.check_output([check_logs_cmd], shell=True)
+        print(output)
         assert output.find(b'CRIT Supervisor is running as root') > -1
 
     def stop_app(self, test_id):
