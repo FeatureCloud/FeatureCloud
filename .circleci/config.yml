@@ -9,7 +9,6 @@ jobs:
       - checkout
       - run: python3 setup.py sdist
       - run: python3 -m pip install dist/FeatureCloud-*
-      - run: uname -m
       - run: featurecloud controller --help
       - run: featurecloud controller start
       - run: featurecloud controller status
