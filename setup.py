@@ -26,6 +26,6 @@ setuptools.setup(name="FeatureCloud",
                                },
                  install_requires=['bottle', 'jsonpickle', 'joblib', 'numpy', 'pydot', 'pyyaml', 'flake8~=3.9.2',
                                    'pycodestyle~=2.7.0', 'Click~=8.0.1', 'requests', 'urllib3~=1.26.6', 'pandas',
-                                   'pyinstaller', 'docker=5.0.3', 'gitpython', 'tqdm']
+                                   'pyinstaller', 'docker==5.0.3', 'gitpython', 'tqdm']
 
                  )
