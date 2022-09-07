@@ -164,6 +164,8 @@ def plot_diagram(path: str, package: str, states: str, plot_name: str):
 
     Package is the relative path of the subpackage containing the states
 
+    States is a comma seperated list of .py files including the states
+
     Plot_name is the name of the plotted diagram file
 
     Example: featurecloud app plot /home/my-app mystates --states states.py --plot_name myplot
