@@ -1,4 +1,7 @@
 import os
+import shutil
+import stat
+
 import docker
 
 from FeatureCloud.api.imp.exceptions import DockerNotAvailable
@@ -26,3 +29,17 @@ def get_docker_client():
         return client
     except docker.errors.DockerException:
         raise DockerNotAvailable()
+
+
+def remove_dir(path_to_delete: str):
+    """
+    Replicates the Linux command 'rm -rf'
+    """
+
+    def remove_readonly(func, path, e):
+        # shutil.rmtree doesn't have the force flag,
+        # so we clear the readonly bit and reattempt the removal in the error handler
+        os.chmod(path, stat.S_IWRITE)
+        os.remove(path)
+
+    shutil.rmtree(path_to_delete, onerror=remove_readonly)
