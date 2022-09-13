@@ -7,7 +7,7 @@ import sys
 from git import GitError
 
 from FeatureCloud.api.imp.exceptions import FCException
-from FeatureCloud.api.imp.util import getcwd_fslash, get_docker_client
+from FeatureCloud.api.imp.util import getcwd_fslash, get_docker_client, remove_dir
 import pydot
 import importlib
 
@@ -43,11 +43,19 @@ def new(name: str, directory: str = '.', template_name: str = 'app-blank') -> st
 
     try:
         app_path = os.path.join(directory, name.lower())
-        repo = git.Repo.clone_from(create_link(template_name), app_path)
+        # depth=1 clones with minimal history information, we delete the .git folder anyway
+        repo = git.Repo.clone_from(create_link(template_name), app_path, multi_options=['--depth=1'])
         repo.delete_remote('origin')
-        return app_path
     except GitError as e:
         raise FCException(e)
+
+    # delete the .git folder
+    try:
+        remove_dir(os.path.join(app_path, '.git'))
+    except:
+        pass
+
+    return app_path
 
 
 def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str = True):
