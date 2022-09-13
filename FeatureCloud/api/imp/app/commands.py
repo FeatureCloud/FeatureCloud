@@ -256,7 +256,9 @@ def plot_state_diagram(path: str, package: str, states: str, plot_name: str):
 
     for t in app.transitions:
         transition = app.transitions[t]
-        state_edge = pydot.Edge(transition[0].name, transition[1].name, label=t)
+        label = t if transition[4] is None else transition[4]
+
+        state_edge = pydot.Edge(transition[0].name, transition[1].name, label=label)
         if transition[2] and transition[3]:
             state_edge.set('color', 'purple')
         elif transition[3]:

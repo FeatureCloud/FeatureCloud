@@ -50,7 +50,11 @@ Basic commands to interact with FC controller regarding the creating apps and
   * tag
 * remove: Delete docker image from local hard drive.
   * name: image name
-
+* plot-states: Plot app states and transitions using state name and transition labels(or names). By default, the main is used to access registered states. Alternatively, one can provide a list of .py files containing registered states. 
+  * path: path to the app directory
+  * states: Comma-separated list of .py files containing the states (in case of not using main file)
+  * package: Comma-separated list of subpackages containing states (in case of not using main file)
+  * plot_name: The name of the output PNG plot file. 
 #### test 
 Commands to manage app(or test workflow of apps) execution:
 * delete: Delete a single test run or all test runs

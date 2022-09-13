@@ -151,7 +151,7 @@ def remove(name: str, tag: str):
         click.echo(f'Error: {e}')
 
 
-@app.command('plot')
+@app.command('plot-states')
 @click.argument('path', type=click.Path(), default=".", required=False)
 @click.option('--package', default=".", help='package/s which include/s the states')
 @click.option('--states', default='main', help='python files containing the states seperated by comma')
@@ -163,6 +163,8 @@ def plot_diagram(path: str, package: str, states: str, plot_name: str):
     Path is the path to directory containing the app
 
     Package is the relative path of the subpackage containing the states
+
+    States is a comma seperated list of .py files including the states
 
     Plot_name is the name of the plotted diagram file
 

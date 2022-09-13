@@ -118,8 +118,11 @@ class App:
 
         self.current_state: Union[AppState, None] = None
         self.states: Dict[str, AppState] = {}
+        # self.transitions: Dict[
+        #     str, Tuple[AppState, AppState, bool, bool]] = {}  # name => (source, target, participant, coordinator)
         self.transitions: Dict[
-            str, Tuple[AppState, AppState, bool, bool]] = {}  # name => (source, target, participant, coordinator)
+            str, Tuple[AppState, AppState, bool, bool, str]] = {}  # name => (source, target, participant, coordinator, label)
+
         self.transition_log: List[Tuple[datetime.datetime, str]] = []
 
         self.internal = {}
@@ -255,7 +258,7 @@ class App:
         si.coordinator = coordinator
         self.states[si.name] = si
 
-    def register_transition(self, name: str, source: str, target: str, participant=True, coordinator=True):
+    def register_transition(self, name: str, source: str, target: str, participant=True, coordinator=True, label: str or None = None):
         """ Receives transition registration parameters, check the validity of its logic,
             and consider it as one possible transitions in the workflow.
             There will be exceptions if apps try to register a transition with contradicting roles.
@@ -296,7 +299,7 @@ class App:
         if coordinator and not target_state.coordinator:
             self.log(f'target state {target} not accessible for the coordinator', level=LogLevel.FATAL)
 
-        self.transitions[name] = (source_state, target_state, participant, coordinator)
+        self.transitions[name] = (source_state, target_state, participant, coordinator, label)
 
     def transition(self, name):
         """ Transits the app workflow to the unique next state based on
@@ -404,7 +407,7 @@ class AppState(abc.ABC):
     def id(self):
         return self._app.id
 
-    def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None):
+    def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None, label: str or None = None):
         """
         Registers a transition in the state machine.
 
@@ -417,11 +420,10 @@ class AppState(abc.ABC):
         name : str or None, default=None
             name of the transition
         """
-
         if not name:
             name = target
         participant, coordinator = role.value
-        self._app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator)
+        self._app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator, label)
 
     def aggregate_data(self, operation: SMPCOperation = SMPCOperation.ADD, use_smpc=False):
         """
