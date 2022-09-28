@@ -16,7 +16,7 @@ class WorkFlow(TestWorkFlow):
         run(): running apps with the same order as registration
 
     """
-    def __init__(self, controller_host: str, channel: str, query_interval: int):
+    def __init__(self, controller_host: str, channel: str, query_interval: str):
         super().__init__(controller_host, channel, query_interval)
 
         self.controller_path = "/home/mohammad/PycharmProjects/FeatureCloud/data"
@@ -31,7 +31,7 @@ class WorkFlow(TestWorkFlow):
                                ctrl_test_path=self.ctrl_test_path,
                                controller_host=controller_host,
                                channel=channel,
-                               query_interval=int(query_interval))
+                               query_interval=query_interval)
 
     def register_apps(self):
         """ Registering the three apps.

@@ -3,7 +3,7 @@ from functools import partial
 
 
 class Controller:
-    def __init__(self, controller_host: str, channel: str, query_interval):
+    def __init__(self, controller_host: str, channel: str, query_interval: str):
         self.controller_host = controller_host
         self.channel = channel
         self.query_interval = query_interval

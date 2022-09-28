@@ -46,9 +46,9 @@ def help():
 @click.option('--download-results',
               help='A directory name where to download results. This will be created into /data/tests directory (e.g. featurecloud test start --download-results=./results).',
               default='')
-def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval,
+def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval: str,
           download_results: str):
-    '''Starts testbed run with the specified parameters'''
+    """Starts testbed run with the specified parameters"""
     try:
         result = commands.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval,
                                 download_results)

@@ -23,7 +23,7 @@ class TestWorkFlow(abc.ABC):
         info(format, controller_ind):
     """
 
-    def __init__(self, controller_host: str, channel: str, query_interval: int):
+    def __init__(self, controller_host: str, channel: str, query_interval: str):
         self.apps = []
         self.controller = Controller(controller_host, channel, query_interval)
         self.default_res_dir_name = "AppResSults"
