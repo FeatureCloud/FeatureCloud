@@ -40,7 +40,7 @@ def help():
 @click.option('--channel', default='local',
               help='The communication channel to be used. Possible values: "local" or "internet" (e.g. featurecloud test start --channel=local).',
               required=True)
-@click.option('--query-interval', default=2,
+@click.option('--query-interval', default=2.0,
               help='The interval after how many seconds the status call will be performed (e.g. featurecloud test start --query-interval=2).',
               required=True)
 @click.option('--download-results',
