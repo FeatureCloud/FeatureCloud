@@ -59,9 +59,11 @@ def start(name: str, port: int, data_dir: str):
             ports={8000: port if port else DEFAULT_PORT},
             volumes=[f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock'],
             labels=[CONTROLLER_LABEL],
-            command=f"--host-root={base_dir}/{data_dir} --internal-root=/{data_dir} --controller-name={cont_name}"
+            command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name}"
         )
     except docker.errors.DockerException as e:
+        raise FCException(e)
+    except Exception as e:
         raise FCException(e)
 
 
