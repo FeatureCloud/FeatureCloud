@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(name="FeatureCloud",
-                 version="0.0.19",
+                 version="0.0.18",
                  author="FeatureCloud",
                  author_email="mohammad.bakhtiari@uni-hamburg.de",
                  description="Secure Federated Learning Platform",
