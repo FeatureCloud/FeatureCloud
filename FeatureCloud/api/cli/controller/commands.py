@@ -15,15 +15,16 @@ def controller() -> None:
 @click.argument('name', type=str, default=commands.DEFAULT_CONTROLLER_NAME, nargs=1, required=False)
 @click.option('--port', default=8000, help='Controller port number. Optional parameter (e.g. --port=8000).', required=False)
 @click.option('--data-dir', default='data', help='Controller data directory. Optional parameter (e.g. --data-dir=./data).', required=False)
-def start(name: str, port: int, data_dir: str) -> None:
+@click.option('--gpu', help='Start controller with GPU access. If this succeeds, controller can allow GPU access for apps.', default=False, required=False)
+def start(name: str, port: int, data_dir: str, gpu: bool) -> None:
     """Start a controller instance.
 
     NAME is the controller instance name
 
-    Example: featurecloud controller start my-fc-controller
+    Example: featurecloud controller start my-fc-controller --gpu=True
     """
     try:
-        commands.start(name, port, data_dir)
+        commands.start(name, port, data_dir, gpu)
         click.echo(f'Started controller: {name}')
     except FCException as e:
         if str(e).find("port is already allocated") > -1:
