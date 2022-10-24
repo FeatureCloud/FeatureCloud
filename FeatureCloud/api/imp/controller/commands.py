@@ -17,7 +17,7 @@ LOG_FETCH_INTERVAL = 3  # seconds
 LOG_LEVEL_CHOICES = ['debug', 'info', 'warn', 'error', 'fatal']
 
 
-def start(name: str, port: int, data_dir: str):
+def start(name: str, port: int, data_dir: str, with_gpu: bool):
     client = get_docker_client()
 
     data_dir = data_dir if data_dir else DEFAULT_DATA_DIR
@@ -50,6 +50,13 @@ def start(name: str, port: int, data_dir: str):
     # forward slash works on all platforms
     base_dir = getcwd_fslash()
 
+    device_requests = None
+    gpu_command = ""
+    if with_gpu:
+        # '--gpus all' option
+        device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+        gpu_command = '--has-gpu'
+
     try:
         client.containers.run(
             CONTROLLER_IMAGE,
@@ -59,7 +66,8 @@ def start(name: str, port: int, data_dir: str):
             ports={8000: port if port else DEFAULT_PORT},
             volumes=[f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock'],
             labels=[CONTROLLER_LABEL],
-            command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name}"
+            device_requests=device_requests,
+            command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command}"
         )
     except docker.errors.DockerException as e:
         raise FCException(e)

@@ -50,7 +50,7 @@ Basic commands to interact with FC controller regarding the app creation:
   * tag
 * remove: Delete the docker image from the local hard drive.
   * name: image name
-* plot-states: Plot app states and transitions using state names and transition labels(or names). By default, the main is used to access registered states. Alternatively, one can provide a list of .py files containing registered states. 
+* plot-states: Plot app states and transitions using state names and transition labels (or names). By default, the main is used to access registered states. Alternatively, one can provide a list of .py files containing registered states. 
   * path: path to the app directory
   * states: Comma-separated list of .py files containing the states (in case of not using the main file)
   * package: Comma-separated list of sub-packages containing states (in case of not using the main file)
@@ -58,22 +58,22 @@ Basic commands to interact with FC controller regarding the app creation:
 #### test 
 Commands to manage app(or test workflow of apps) execution:
 * delete: Delete a single test run or all test runs
-  * controller-host: Address of your running controller instance.[required]
+  * controller-host: Address of your running controller instance. [required]
   * test-id The test id of the test is to be deleted. To delete all tests omit this option and use "delete all."
 * info: Get details about a single test run
-  * controller-host: Address of your running controller instance.[required]
+  * controller-host: Address of your running controller instance. [required]
   * test-id The test id of the test is to be deleted. To delete all tests omit this option and use "delete all".
-  * format: Format of the test info. JSON or dataframe [required]
+  * format: Format of the test info. JSON or dataframe. [required]
 * list: List all test runs
   * controller-host: Address of your running controller instance.[required]
-  * format: Format of the test info. json or dataframe [required]
+  * format: Format of the test info. json or dataframe. [required]
 * logs: Get the logs of a single test runs
-  * controller-host: Address of your running controller instance.[required]
+  * controller-host: Address of your running controller instance. [required]
   * test-id The test id of the test. To delete all tests omit this option and use "delete all."
   * instance-id: The instance id of the client. [required]
-  * format: Format of the test info. JSON or dataframe [required]
+  * format: Format of the test info. JSON or dataframe. [required]
 * start: Start a single test run
-  * controller-host: Address of your running controller instance.[required]
+  * controller-host: Address of your running controller instance. [required]
   * client-dirs: Comma-separated client directories. [required]
   * generic-dir: Generic directory available for all clients. Content will be copied to the input folder of all instances. [required]
   * app-image: The repository URL of the app image. [required]
@@ -86,11 +86,11 @@ Commands to manage app(or test workflow of apps) execution:
 * traffic: Show the traffic of a single test run
   * controller-host: Address of your running controller instance.[required]
   * test-id: The test id of the test to be stopped.
-  * format: Format of the test traffic. JSON or dataframe[required]
+  * format: Format of the test traffic. JSON or dataframe. [required]
 * workflow: Subcommands to manage running a test workflow
-  * controller-host: Address of your running controller instance.[required]
-  * wf-dir: path to the directory containing the workflow[required]
-  * wf-file: python file including the workflow  [required]
+  * controller-host: Address of your running controller instance. [required]
+  * wf-dir: path to the directory containing the workflow. [required]
+  * wf-file: python file including the workflow. [required]
   * channel: The communication channel to be used. It can be local or internet. [required]
   * query-interval: The interval(in seconds) after how many seconds the status call will be performed. [required]
 ### imp
