@@ -67,9 +67,11 @@ def start(name: str, port: int, data_dir: str, with_gpu: bool):
             volumes=[f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock'],
             labels=[CONTROLLER_LABEL],
             device_requests=device_requests,
-            command=f"--host-root={base_dir}/{data_dir} --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command}"
+            command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command}"
         )
     except docker.errors.DockerException as e:
+        raise FCException(e)
+    except Exception as e:
         raise FCException(e)
 
 
