@@ -57,6 +57,10 @@ def start(name: str, port: int, data_dir: str, with_gpu: bool, mount: str):
         device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
         gpu_command = '--has-gpu'
 
+    volumes = [f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock']
+    if mount:
+        volumes.append(f'{mount}:/mnt')
+
     try:
         client.containers.run(
             CONTROLLER_IMAGE,
@@ -64,7 +68,7 @@ def start(name: str, port: int, data_dir: str, with_gpu: bool, mount: str):
             name=cont_name,
             platform='linux/amd64',
             ports={8000: port if port else DEFAULT_PORT},
-            volumes=[f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock', f'{mount}:/mnt'],
+            volumes=volumes,
             labels=[CONTROLLER_LABEL],
             device_requests=device_requests,
             command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command}"
