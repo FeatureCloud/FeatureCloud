@@ -11,7 +11,7 @@ from FeatureCloud.api.imp.util import getcwd_fslash, get_docker_client, remove_d
 import pydot
 import importlib
 
-FC_REPO_PREFIX = "featurecloud.ai/"
+FC_REPO_PREFIX = "beta.featurecloud.ai/"
 
 
 def create_link(template_name: str) -> str:
