@@ -45,10 +45,10 @@ class TestApp(Controller):
     """
     def __init__(self, app_id, ctrl_data_path, ctrl_test_path, n_clients, app_image, **kwargs):
         super().__init__(**kwargs)
-        if app_image.strip().startswith("beta.featurecloud.ai/"):
+        if app_image.strip().startswith("featurecloud.ai/"):
             self.app_image = app_image.strip()
         else:
-            self.app_image = f"beta.featurecloud.ai/{app_image.strip()}"
+            self.app_image = f"featurecloud.ai/{app_image.strip()}"
         self.test_id = None
         self.n_clients = n_clients
         self.results_ready = False
