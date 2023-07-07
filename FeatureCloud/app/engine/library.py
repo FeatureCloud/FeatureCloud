@@ -1,3 +1,6 @@
+"""
+This is the module-level docstring for library.py
+"""
 from distutils import dir_util
 
 import yaml
