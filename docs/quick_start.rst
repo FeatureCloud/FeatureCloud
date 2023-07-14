@@ -2,10 +2,11 @@
 Quickstart
 ==========
 This pip package is intended to be used with the `FeatureCloud <https://featurecloud.ai/>`_ privacy-preserving platform for federated learning and data-analysis.
+Its purpose is to speed up app development by providing a CLI tool for common operations related to development.
 
 Prerequisites
 -------------
-Install Python
+- Python
 
 Installation
 ------------
@@ -27,7 +28,7 @@ More details about commands and its subcommands are available in the command lin
 App template based development
 ------------------------------
 
-1. Check out our app templates below
+1. Check out our app templates in the next section
 
 2. Create and implement an application based on a template
 
