@@ -6,7 +6,8 @@ Its purpose is to speed up app development by providing a CLI tool for common op
 
 Prerequisites
 -------------
-- Python
+- `Docker <https://www.docker.com/>`_ needs to be installed
+- `Python <https://www.python.org/>`_ needs to be installed
 
 Installation
 ------------
@@ -24,6 +25,13 @@ Command                   Description
 ========================= ==================================================
 
 More details about commands and its subcommands are available in the command line ``--help`` option
+
+Application development
+-----------------------
+There are two ways to implement applications for FeatureCloud:
+
+- App template based development (recommended)
+- Developing applications from scratch
 
 App template based development
 ------------------------------
@@ -69,7 +77,6 @@ The `App Four template <https://github.com/FeatureCloud/app-four/>`_ contains fo
 
 How to?
 -------
-Check out our Medium post collection regarding frequently asked questions during app development!
 
 Create an app
 ^^^^^^^^^^^^^
@@ -90,3 +97,24 @@ Publish your app
 Run app with GPU
 ^^^^^^^^^^^^^^^^
 `Read all <https://medium.com/developing-federated-applications-in-featurecloud/run-featurecloud-applications-with-gpu-acceleration-39cfec98f952/>`_ about using GPU support in your application.
+
+Developing applications from scratch
+------------------------------------
+Steps for creating your federated application from scratch:
+
+1. Create your application in a language of your choice
+
+2. Implement `FeatureCloud App Developer API <https://featurecloud.ai/assets/api/redoc-static.html/>`_ along with your application logic
+
+3. Build Docker image from your application: ``docker build --no-cache -t my-app ./my-app``
+
+4. Test your application: FeatureCloud provides a `Testbed <https://featurecloud.ai/development/test/>`_ that allows to test applications locally by simulating multiple locations
+
+5. Tag and push your application in FeatureCloud App Store:
+
+``docker tag <Image_ID> featurecloud.ai/my-app``
+
+``docker login featurecloud.ai``
+
+``docker push featurecloud.ai/my-app``
+
