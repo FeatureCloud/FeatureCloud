@@ -112,9 +112,8 @@ Steps for creating your federated application from scratch:
 
 5. Tag and push your application in FeatureCloud App Store:
 
-``docker tag <Image_ID> featurecloud.ai/my-app``
+- Tag your app: ``docker tag <Image_ID> featurecloud.ai/my-app``
 
-``docker login featurecloud.ai``
+- Login to our Docker registry with your FeatureCloud.ai user credentials: ``docker login featurecloud.ai``
 
-``docker push featurecloud.ai/my-app``
-
+- Push your app: ``docker push featurecloud.ai/my-app``
