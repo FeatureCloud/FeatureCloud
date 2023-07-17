@@ -1,3 +1,6 @@
+"""
+Test module documentation string for app.py
+"""
 import abc
 import datetime
 import json
@@ -18,27 +21,58 @@ TRANSITION_WAIT = 1  # Time (seconds) to wait between state transitions
 
 
 class Role(Enum):
+    """
+    | Describes the Role of a client
+    | Can be one of the following values:
+    | Role.PARTICIPANT
+    | Role.COORDINATOR
+    | Role.BOTH
+    """
     PARTICIPANT = (True, False)
     COORDINATOR = (False, True)
     BOTH = (True, True)
 
 
 class State(Enum):
+    """
+    | Describes the current State of the app instance
+    | Can be one of the following values:
+    | State.RUNNING
+    | State.ERROR
+    | State.ACTION
+    """
     RUNNING = 'running'
     ERROR = 'error'
     ACTION = 'action_required'
 
 
 class SMPCOperation(Enum):
+    """
+    | It's parameters are used to describe SMPC Operations for other functions
+    | One of the following:
+    | SMPCOperation.ADD
+    | SMPCOperation.MULTIPLY
+    """
     ADD = 'add'
     MULTIPLY = 'multiply'
 
 
 class SMPCSerialization(Enum):
+    """
+    | Describes the serialization used with data when using SMPC, so the format data is send between different components of Featurecloud, e.g. between the app instance and the controller
+    | Currently ony the following is supported
+    | SMPCSerialization.JSON
+    """
     JSON = 'json'
 
 
 class LogLevel(Enum):
+    """
+    | The level of a log, given to the log function.
+    | LogLevel.DEBUG: Just for debugging
+    | LogLevel.ERROR: Throws an error but does not halt the program
+    | LogLevel.FATAL: Stops the program
+    """
     DEBUG = 'info'
     ERROR = 'error'
     FATAL = 'fatal'
@@ -137,7 +171,7 @@ class App:
                 pass
 
     def handle_setup(self, client_id, coordinator, clients):
-        """ It will be called on startup and contains information about the 
+        """ It will be called on startup and contains information about the
             execution context of this instance. And registers all of the states.
 
 
@@ -349,15 +383,99 @@ class App:
 class AppState(abc.ABC):
     """ Defining custom states
 
-    Attributes:
-    -----------
+    AppState is the class used when programming a FeatureCloud App to create
+    states and to communicate with other clients. Generally, a FeatureCloud app
+    consists of different states that all share the same AppState class.
+    The states themselves are created as classes with the
+    @app_state("statename") decorator.
+    See the example below or the template apps for more details.
+
+    Examples
+    --------
+    ::
+
+        # A simple example for a typical federated learning app
+        from FeatureCloud.app.engine.app import AppState, app_state, Role, LogLevel
+
+        # an intial state for loading the data
+        @app_state("initial")
+        class InitialState(AppState): # you can choose any fitting classname
+          def register(self):
+            self.register_transition("local_computation", Role.BOTH)
+              # Role.BOTH means that this transition can be done by
+              # the coordinator and a participant
+          def run(self):
+            # Here you can for example load the config file and the data
+            dataFile = os.path.join(os.getcwd(), "mnt", "input", "data.csv"))
+            data = pd.read_csv(dataFile)
+            # Data can be stored for access in other states like this
+            self.store(key = "keyData", value=data)
+            # Also store some intial model
+            self.store(key = "model", value=np.zeros(5))
+            # to progress to another state, simply return the states name
+            return "local_computation"
+
+        # a state for the local computation
+        @app_state
+        class local_computation(AppState):
+          def register(self):
+            self.register_transition("aggregate_data", Role.COORDINATOR)
+            self.register_transition("obtain_weights", Role.PARTICIPANT)
+
+          def run(self):
+            # do some local computations
+            model = calculateThings(self.load("keyData"), self.load("model"))
+              # loads the data and calculates some model
+            self.send_data_to_coordinator(model,
+                                        send_to_self=True,
+                                        use_smpc=False)
+            if self.is_coordinator:
+              return "aggregate"
+            else:
+              return "obtain_weights"
+
+        # a state just for obtaining the weights from the coordinator
+        @app_state("obtain_weights")
+        class obtainWeights(AppState):
+          def register(self):
+            self.register_transition("local_computation", Role.BOTH)
+
+          def run(self):
+            updated_model = self.await_data(n = 1,)
+              # n=1 since we only expect one model from the coordinator
+            self.store("model", updated_model)
+            return "local_computation"
+
+        # a state for the coordinator to aggregate all weights
+        @app_state("aggregate_data")
+        class aggregateDataState(AppState):
+          def register(self):
+            self.register_transition("obtain_weights", Role.COORDINATOR)
+            self.register_transition("terminal", Role.COORDINATOR)
+          def run(self):
+            aggregated_model = self.aggregate_data(operation = SMPCOperation.ADD)
+              # waits for every participant to send someting and then
+              # adds them together
+            updated_model = aggregated_model / len(self.clients)
+            if stop_training_criteria: # if the training is done
+              fp = open(os.path.join("mnt", "output", "trained_model.pyc"), "wb")
+              np.save(fp, updated_model)
+              return "terminal"
+                # going to the terminal state will finnish the app and tell
+                # all clients that the computation is done
+            else:
+              self.broadcast_data(updated_model, send_to_self = True)
+              return "obtain_weights"
+
+    Attributes
+    ----------
     app: App
     name: str
     participant: bool
     coordinator: bool
 
-    Methods:
-    --------
+    Methods
+    -------
     register()
     run()
     register_transition(target, role, name)
@@ -437,7 +555,7 @@ class AppState(abc.ABC):
             if True, the data to be aggregated is expected to stem from an SMPC aggregation
 
         Returns
-        ----------
+        -------
         aggregated value
         """
 
@@ -457,7 +575,7 @@ class AppState(abc.ABC):
             if True, expects a JSON serialized values and deserializes it accordingly
 
         Returns
-        ----------
+        -------
         list of n data pieces, where n is the number of participants
         """
 
@@ -479,7 +597,7 @@ class AppState(abc.ABC):
             if True, expects JSON serialized values and deserializes it accordingly
 
         Returns
-        ----------
+        -------
         list of data pieces (if n > 1 or unwrap = False) or a single data piece (if n = 1 and unwrap = True)
         """
 
