@@ -781,12 +781,41 @@ class AppState(abc.ABC):
             The distribution of noise added when adding differential privacy to
             the model
         """
-        #TODO: add description
-
         if sensitivity and sensitivity == 0:
             self._app.log('DP was configured to a sensitivity of 0, therefore '+\
                           'deactivating DP. Use sensitivity = None if sensitivity '+\
                           'given via clipping should be used',  level=LogLevel.FATAL)
+        if clippingVal and clippingVal == 0:
+            self._app.log('DP was configured to a clippingVal of 0, this would '+\
+                          'block all learning. Use clippingVal = None if '+\
+                          'no clipping of models is wanted. In that case, ' +\
+                          'a sensitivity value is needed to use DP',  level=LogLevel.FATAL)
+        if not delta:
+            self._app.log("Delta not given, please give a delta value or DP cannot be applied",
+                          level=LogLevel.FATAL)
+        if not epsilon:
+            self._app.log("Epsilon not given, please give an epsilon value or DP cannot be applied",
+                          level=LogLevel.FATAL)
+        if not noisetype:
+            self._app.log("noisetype not given, please give an noisetype value or DP cannot be applied",
+                          level=LogLevel.FATAL)
+        if epsilon <= 0:
+            self._app.log("invalid epsilon given, epsilon must be a positive number",
+                          level=LogLevel.FATAL)
+        if delta <= 0:
+            self._app.log("invalid delta given, delta must be >= 0",
+                          level=LogLevel.FATAL)
+        if noisetype == DPNoisetype.LAPLACE and delta != 0:
+            self._app.log("When using laplace noise, delta must be set to 0!",
+                          level=LogLevel.FATAL)
+        if noisetype == DPNoisetype.GAUSS:
+            if delta <= 0:
+                self._app.log("When using gauss noise, delta must be >= 0",
+                          level=LogLevel.FATAL)
+            if epsilon >= 1:
+                self._app.log("When using gauss noise, epsilon must be 0 < eps < 1",
+                          level=LogLevel.FATAL)
+
         self._app.default_dp['serialization'] = 'json'
         self._app.default_dp['noisetype'] = noisetype.value
         self._app.default_dp['epsilon'] = epsilon
