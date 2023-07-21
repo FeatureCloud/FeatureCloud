@@ -734,8 +734,7 @@ class AppState(abc.ABC):
             self.send_data_to_participant(data,
                                           destination=self.id,
                                           use_dp=True)
-            data = self.await_data(self,
-                                   n = 1,
+            data = self.await_data(n = 1,
                                    unwrap=True,
                                    is_json=True)
 
