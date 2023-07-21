@@ -606,7 +606,8 @@ class AppState(abc.ABC):
         ----------
         is_json : bool, default=False
             if True, expects a JSON serialized values and deserializes it accordingly
-
+            JSON serialization is used with SMPC and DP, so when SMPC or DP was used
+            in the corresponding send_data, is_json should be true.
         Returns
         -------
         list of n data pieces, where n is the number of participants
@@ -628,6 +629,10 @@ class AppState(abc.ABC):
             if True, will return the first element of the collected data (only useful if n = 1)
         is_json : bool, default=False
             if True, expects JSON serialized values and deserializes it accordingly
+            JSON serialization is used with SMPC and DP, so when SMPC or DP was used
+            in the corresponding send_data, is_json should be true.
+            Data sent via broadcast however is always serialized via pickle, so for
+            if the await_data expects data from broadcast, is_json=False should be used
 
         Returns
         -------
@@ -709,7 +714,7 @@ class AppState(abc.ABC):
             self._app.status_dp = self._app.default_dp if use_dp else None
             self._app.status_available = True
 
-    def broadcast_data(self, data, send_to_self=True):
+    def broadcast_data(self, data, send_to_self=True, use_dp = False):
         """
         Broadcasts data to all participants (only valid for the coordinator instance).
 
@@ -719,17 +724,28 @@ class AppState(abc.ABC):
             data to be sent
         send_to_self : bool
             if True, the data will also be sent internally to this coordinator instance
+        use_dp : bool
+            if True, data will be noised with DP before being broadcasted
         """
-
-        # serialize for dp
-        data = _serialize_outgoing(data, is_json=False)
-
         if not self._app.coordinator:
             self._app.log('only the coordinator can broadcast data', level=LogLevel.FATAL)
+
+        if use_dp:
+            self.send_data_to_participant(data,
+                                          destination=self.id,
+                                          use_dp=True)
+            data = self.await_data(self,
+                                   n = 1,
+                                   unwrap=True,
+                                   is_json=True)
+
+        # serialize before broadcast
+        data = _serialize_outgoing(data, is_json=False)
 
         self._app.data_outgoing.append((data, False, False, None))
         self._app.status_destination = None
         self._app.status_smpc = None
+        self._app.status_dp = None
         self._app.status_available = True
         if send_to_self:
             self._app.data_incoming.append((data, self._app.id))
@@ -905,6 +921,17 @@ def app_state(name: str, role: Role = Role.BOTH, app_instance: Union[App, None] 
 
     return func
 
+class _NumpyArrayEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            # call default Encoder in other cases
+            return json.JSONEncoder.default(self, obj)
 
 def _serialize_outgoing(data, is_json=False):
     """
@@ -925,7 +952,8 @@ def _serialize_outgoing(data, is_json=False):
     if not is_json:
         return pickle.dumps(data)
 
-    return json.dumps(data)
+    # we use a custom cls to manage numpy which is quite common
+    return json.dumps(data, cls=_NumpyArrayEncoder)
 
 
 def _deserialize_incoming(data: bytes, is_json=False):
