@@ -15,8 +15,11 @@ def controller() -> None:
 @click.argument('name', type=str, default=commands.DEFAULT_CONTROLLER_NAME, nargs=1, required=False)
 @click.option('--port', default=8000, help='Controller port number. Optional parameter (e.g. --port=8000).', required=False)
 @click.option('--data-dir', default='data', help='Controller data directory. Optional parameter (e.g. --data-dir=./data).', required=False)
+@click.option('--controller-image', default=commands.DEFAULT_CONTROLLER_IMAGE, help='Controller image name (e.g., featurecloud.ai/controller:latest)', required=False)
 @click.option('--gpu', help='Start controller with GPU access. If this succeeds, controller can allow GPU access for apps.', default=False, required=False)
-def start(name: str, port: int, data_dir: str, gpu: bool) -> None:
+@click.option('--mount', help='Use this option when you want mount a folder that is available only to the '
+                              'controller\'s protected environment, e.g. to upload input data for apps.', default='', required=False)
+def start(name: str, port: int, data_dir: str, controller_image, gpu: bool, mount: str) -> None:
     """Start a controller instance.
 
     NAME is the controller instance name
@@ -24,7 +27,7 @@ def start(name: str, port: int, data_dir: str, gpu: bool) -> None:
     Example: featurecloud controller start my-fc-controller --gpu=True
     """
     try:
-        commands.start(name, port, data_dir, gpu)
+        commands.start(name, port, data_dir, controller_image, gpu, mount)
         click.echo(f'Started controller: {name}')
     except FCException as e:
         if str(e).find("port is already allocated") > -1:

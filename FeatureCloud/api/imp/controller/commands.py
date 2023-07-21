@@ -8,7 +8,7 @@ from FeatureCloud.api.imp.test.helper import http
 
 from FeatureCloud.api.imp.util import getcwd_fslash, get_docker_client
 
-CONTROLLER_IMAGE = "featurecloud.ai/controller"
+DEFAULT_CONTROLLER_IMAGE = "featurecloud.ai/controller"
 CONTROLLER_LABEL = "FCControllerLabel"
 DEFAULT_PORT = 8000
 DEFAULT_CONTROLLER_NAME = 'fc-controller'
@@ -17,10 +17,11 @@ LOG_FETCH_INTERVAL = 3  # seconds
 LOG_LEVEL_CHOICES = ['debug', 'info', 'warn', 'error', 'fatal']
 
 
-def start(name: str, port: int, data_dir: str, with_gpu: bool):
+def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: bool, mount: str):
     client = get_docker_client()
 
     data_dir = data_dir if data_dir else DEFAULT_DATA_DIR
+    controller_image = controller_image if controller_image else DEFAULT_CONTROLLER_IMAGE
     # Create data dir if needed
     try:
         os.mkdir(data_dir)
@@ -40,7 +41,7 @@ def start(name: str, port: int, data_dir: str, with_gpu: bool):
 
     # pull controller and display progress
     try:
-        pull_proc = client.api.pull(repository=CONTROLLER_IMAGE, stream=True)
+        pull_proc = client.api.pull(repository=controller_image, stream=True)
         for p in tqdm.tqdm(pull_proc, desc='Downloading...'):
             pass
     except docker.errors.DockerException as e:
@@ -57,14 +58,18 @@ def start(name: str, port: int, data_dir: str, with_gpu: bool):
         device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
         gpu_command = '--has-gpu'
 
+    volumes = [f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock']
+    if mount:
+        volumes.append(f'{mount}:/mnt')
+
     try:
         client.containers.run(
-            CONTROLLER_IMAGE,
+            controller_image,
             detach=True,
             name=cont_name,
             platform='linux/amd64',
             ports={8000: port if port else DEFAULT_PORT},
-            volumes=[f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock'],
+            volumes=volumes,
             labels=[CONTROLLER_LABEL],
             device_requests=device_requests,
             command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command}"
