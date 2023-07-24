@@ -33,6 +33,7 @@ def ctrl_status():
         'state': app.status_state,
         'destination': app.status_destination,
         'smpc': app.status_smpc,
+        'dp': app.status_dp,
     })
 
 

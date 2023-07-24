@@ -77,6 +77,13 @@ class LogLevel(Enum):
     ERROR = 'error'
     FATAL = 'fatal'
 
+class DPNoisetype(Enum):
+    GAUSS = 'gauss'
+    LAPLACE = 'laplace'
+
+class DPSerialization(Enum):
+    JSON = 'json'
+
 
 class SMPCType(TypedDict):
     operation: Literal['add', 'multiply']
@@ -84,6 +91,13 @@ class SMPCType(TypedDict):
     shards: int
     exponent: int
 
+class DPType(TypedDict):
+    serialization: Literal['json']
+    noisetype: Literal['gauss', 'laplace']
+    epsilon: float
+    delta: float
+    sensitivity: Union[float, None]
+    clippingVal: Union[float, None]
 
 class App:
     """ Implementing the workflow for the FeatureCloud platform.
@@ -103,6 +117,7 @@ class App:
     status_smpc: dict
 
     default_smpc: dict
+    default_dp: dict
 
     data_incoming: list
     data_outgoing: list
@@ -144,16 +159,21 @@ class App:
         self.status_state: Union[str, None] = None
         self.status_destination: Union[str, None] = None
         self.status_smpc: Union[SMPCType, None] = None
+        self.status_dp: Union[DPType, None] = None
 
         self.data_incoming = []
-        self.data_outgoing = []
+        self.data_outgoing = [] # list of lists[data, use_smpc_bool, use_dp_bool, destination]
+                                # destination of None sends the data to the coordinator
 
         self.default_smpc: SMPCType = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'exponent': 8}
+        self.default_dp: DPType = {'serialization': 'json', 'noisetype': 'laplace',
+                                   'epsilon': 1.0, 'delta': 0.0,
+                                   'sensitivity': None, 'clippingVal': 10.0}
 
         self.current_state: Union[AppState, None] = None
         self.states: Dict[str, AppState] = {}
-        # self.transitions: Dict[
-        #     str, Tuple[AppState, AppState, bool, bool]] = {}  # name => (source, target, participant, coordinator)
+        #self.transitions: Dict[
+        #    str, Tuple[AppState, AppState, bool, bool]] = {}  # name => (source, target, participant, coordinator)
         self.transitions: Dict[
             str, Tuple[AppState, AppState, bool, bool, str]] = {}  # name => (source, target, participant, coordinator, label)
 
@@ -223,7 +243,7 @@ class App:
             self.transition(f'{self.current_state.name}_{transition}')
             if self.current_state.name == 'terminal':
                 self.status_progress = 1.0
-                self.log(f'done')
+                self.log('done')
                 sleep(TERMINAL_WAIT)
                 self.status_finished = True
                 return
@@ -255,20 +275,25 @@ class App:
     def handle_outgoing(self):
         """ When it is requested to send some data to other client/s
             it will be called to deliver the data to the FeatureCloud Controller.
+            Then sets status variables (status_*) accordingly for the next data to send from
+            self.data_outgoing
 
         """
         if len(self.data_outgoing) == 0:
             return None
         data = self.data_outgoing[0]
-        self.data_outgoing = self.data_outgoing[1:]
+        self.data_outgoing = self.data_outgoing[1:] # use data_outgoing as queue, sending one data
+                                                    # piece at a time
         if len(self.data_outgoing) == 0:
             self.status_available = False
             self.status_destination = None
             self.status_smpc = None
+            self.status_dp = None
         else:
             self.status_available = True
             self.status_smpc = self.default_smpc if self.data_outgoing[0][1] else None
-            self.status_destination = self.data_outgoing[0][2]
+            self.status_dp = self.default_dp if self.data_outgoing[0][2] else None
+            self.status_destination = self.data_outgoing[0][3]
         return data[0]
 
     def _register_state(self, name, state, participant, coordinator, **kwargs):
@@ -292,7 +317,7 @@ class App:
         si.coordinator = coordinator
         self.states[si.name] = si
 
-    def register_transition(self, name: str, source: str, target: str, participant=True, coordinator=True, label: str or None = None):
+    def register_transition(self, name: str, source: str, target: str, participant=True, coordinator=True, label: Union[str,None] = None):
         """ Receives transition registration parameters, check the validity of its logic,
             and consider it as one possible transitions in the workflow.
             There will be exceptions if apps try to register a transition with contradicting roles.
@@ -350,7 +375,7 @@ class App:
         if not transition:
             self.log(f'transition {name} not found', level=LogLevel.FATAL)
         if transition[0] != self.current_state:
-            self.log(f'current state unequal to source state', level=LogLevel.FATAL)
+            self.log('current state unequal to source state', level=LogLevel.FATAL)
         if not transition[2] and not self.coordinator:
             self.log(f'cannot perform transition {name} as participant', level=LogLevel.FATAL)
         if not transition[3] and self.coordinator:
@@ -525,7 +550,7 @@ class AppState(abc.ABC):
     def id(self):
         return self._app.id
 
-    def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None, label: str or None = None):
+    def register_transition(self, target: str, role: Role = Role.BOTH, name: Union[str, None] = None, label: Union[str, None] = None):
         """
         Registers a transition in the state machine.
 
@@ -538,12 +563,14 @@ class AppState(abc.ABC):
         name : str or None, default=None
             name of the transition
         """
+
         if not name:
             name = target
         participant, coordinator = role.value
         self._app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator, label)
 
-    def aggregate_data(self, operation: SMPCOperation = SMPCOperation.ADD, use_smpc=False):
+    def aggregate_data(self, operation: SMPCOperation = SMPCOperation.ADD, use_smpc=False,
+                       use_dp=False):
         """
         Waits for all participants (including the coordinator instance) to send data and returns the aggregated value.
 
@@ -553,6 +580,9 @@ class AppState(abc.ABC):
             specifies the aggregation type
         use_smpc : bool, default=False
             if True, the data to be aggregated is expected to stem from an SMPC aggregation
+        use_dp: bool, default=False
+            if True, clients sent their data adding dp via the use_dp option in the send functions
+            this means the data is in json format
 
         Returns
         -------
@@ -561,6 +591,9 @@ class AppState(abc.ABC):
 
         if use_smpc:
             return self.await_data(1, unwrap=True, is_json=True)  # Data is aggregated already
+        elif use_dp:
+            data = self.gather_data(is_json=True)
+            return _aggregate(data, operation)
         else:
             data = self.gather_data(is_json=False)
             return _aggregate(data, operation)  # Data needs to be aggregated according to operation
@@ -573,7 +606,8 @@ class AppState(abc.ABC):
         ----------
         is_json : bool, default=False
             if True, expects a JSON serialized values and deserializes it accordingly
-
+            JSON serialization is used with SMPC and DP, so when SMPC or DP was used
+            in the corresponding send_data, is_json should be true.
         Returns
         -------
         list of n data pieces, where n is the number of participants
@@ -595,12 +629,15 @@ class AppState(abc.ABC):
             if True, will return the first element of the collected data (only useful if n = 1)
         is_json : bool, default=False
             if True, expects JSON serialized values and deserializes it accordingly
+            JSON serialization is used with SMPC and DP, so when SMPC or DP was used
+            in the corresponding send_data, is_json should be true.
+            Data sent via broadcast however is always serialized via pickle, so for
+            if the await_data expects data from broadcast, is_json=False should be used
 
         Returns
         -------
         list of data pieces (if n > 1 or unwrap = False) or a single data piece (if n = 1 and unwrap = True)
         """
-
         while True:
             if len(self._app.data_incoming) >= n:
                 data = self._app.data_incoming[:n]
@@ -608,10 +645,11 @@ class AppState(abc.ABC):
                 if n == 1 and unwrap:
                     return _deserialize_incoming(data[0][0], is_json=is_json)
                 else:
-                    return [_deserialize_incoming(d[0]) for d in data]
+                    return [_deserialize_incoming(d[0], is_json=is_json) for d in data]
+
             sleep(DATA_POLL_INTERVAL)
 
-    def send_data_to_participant(self, data, destination):
+    def send_data_to_participant(self, data, destination, use_dp=False):
         """
         Sends data to a particular participant identified by its ID.
 
@@ -623,17 +661,19 @@ class AppState(abc.ABC):
             destination client ID
         """
 
-        data = _serialize_outgoing(data, is_json=False)
-
-        if destination == self._app.id:
+        data = _serialize_outgoing(data, is_json=use_dp)
+        if destination == self._app.id and not use_dp:
+            # In no DP case, the data does not have to be sent via the controller
             self._app.data_incoming.append((data, self._app.id))
         else:
-            self._app.data_outgoing.append((data, False, destination))
+            self._app.data_outgoing.append((data, False, use_dp, destination))
             self._app.status_destination = destination
             self._app.status_smpc = None
+            self._app.status_dp = self._app.default_dp if use_dp else None
             self._app.status_available = True
 
-    def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False):
+    def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False,
+                                 use_dp=False):
         """
         Sends data to the coordinator instance.
 
@@ -645,20 +685,36 @@ class AppState(abc.ABC):
             if True, the data will also be sent internally to this instance (only applies to the coordinator instance)
         use_smpc : bool, default=False
             if True, the data will be sent as part of an SMPC aggregation step
+        use_dp : bool, default=False
+            if True, the data will be noised before sending according to the
+            saved dp configuration
         """
+        if use_smpc or use_dp:
+            data = _serialize_outgoing(data, is_json=True)
 
-        data = _serialize_outgoing(data, is_json=use_smpc)
+        else:
+            data = _serialize_outgoing(data, is_json=False)
 
-        if self._app.coordinator and not use_smpc:
+        if self._app.coordinator and not use_smpc and not use_dp:
+            # coordinator sending itself data, if that is wanted (send_to_self),
+            # and neither dp nor smpc are used, the controller does not have to be used
+            # for sending the data
             if send_to_self:
                 self._app.data_incoming.append((data, self._app.id))
         else:
-            self._app.data_outgoing.append((data, use_smpc, None))
-            self._app.status_destination = None
+            # for SMPC and DP, the data has to be sent via the controller
+            self._app.data_outgoing.append((data, use_smpc, use_dp, None))
+            if use_dp and self._app.coordinator:
+                # give the coordinator as destination,
+                # else, it will be interpreted as a broadcast action
+                self._app.status_destination = self._app.id
+            else:
+                self._app.status_destination = None
             self._app.status_smpc = self._app.default_smpc if use_smpc else None
+            self._app.status_dp = self._app.default_dp if use_dp else None
             self._app.status_available = True
 
-    def broadcast_data(self, data, send_to_self=True):
+    def broadcast_data(self, data, send_to_self=True, use_dp = False):
         """
         Broadcasts data to all participants (only valid for the coordinator instance).
 
@@ -668,15 +724,27 @@ class AppState(abc.ABC):
             data to be sent
         send_to_self : bool
             if True, the data will also be sent internally to this coordinator instance
+        use_dp : bool
+            if True, data will be noised with DP before being broadcasted
         """
-
-        data = _serialize_outgoing(data, is_json=False)
-
         if not self._app.coordinator:
             self._app.log('only the coordinator can broadcast data', level=LogLevel.FATAL)
-        self._app.data_outgoing.append((data, False, None))
+
+        if use_dp:
+            self.send_data_to_participant(data,
+                                          destination=self.id,
+                                          use_dp=True)
+            data = self.await_data(n = 1,
+                                   unwrap=True,
+                                   is_json=True)
+
+        # serialize before broadcast
+        data = _serialize_outgoing(data, is_json=False)
+
+        self._app.data_outgoing.append((data, False, False, None))
         self._app.status_destination = None
         self._app.status_smpc = None
+        self._app.status_dp = None
         self._app.status_available = True
         if send_to_self:
             self._app.data_incoming.append((data, self._app.id))
@@ -702,6 +770,75 @@ class AppState(abc.ABC):
         self._app.default_smpc['shards'] = shards
         self._app.default_smpc['operation'] = operation.value
         self._app.default_smpc['serialization'] = serialization.value
+
+    def configure_dp(self, epsilon: float = 1.0, delta: float =  0.0,
+                     sensitivity: float or None = None,
+                     clippingVal: float or None = 10.0,
+                     noisetype: DPNoisetype = DPNoisetype.LAPLACE):
+        """
+        Configures the usage of differential privacy inside the FeatureCloud
+        controller
+
+        Parameters
+        ----------
+        epsilon: : float, default = 1.0
+            the epsilon value determining how much privacy is wanted
+        delta : float, default = 0.0
+            the delta value determining how much privacy is wanted. Should be 0
+            when using laplace noise (noisetype=DPNoisetype.LAPLACE)
+        clippingVal : float, 10.0
+            Determines the scaling down of values sent via the controller.
+            if e.g. an array of 5 numeric values ( 5 weights) is sent via the
+            controller and clippingVal = 10.0 is choosen, then the p-norm of all
+            5 values will not exceed 10. For laplace the 1-norm is choosen, for
+            gauss noise the 2-norm.
+        noisetype: DPNoisetype.LAPLACE or DPNoisetype.GAUSS, default = DPNoisetype.LAPLACE
+            The distribution of noise added when adding differential privacy to
+            the model
+        """
+        if sensitivity and sensitivity == 0:
+            self._app.log('DP was configured to a sensitivity of 0, therefore '+\
+                          'deactivating DP. Use sensitivity = None if sensitivity '+\
+                          'given via clipping should be used',  level=LogLevel.FATAL)
+        if clippingVal and clippingVal == 0:
+            self._app.log('DP was configured to a clippingVal of 0, this would '+\
+                          'block all learning. Use clippingVal = None if '+\
+                          'no clipping of models is wanted. In that case, ' +\
+                          'a sensitivity value is needed to use DP',  level=LogLevel.FATAL)
+        if not delta:
+            self._app.log("Delta not given, please give a delta value or DP cannot be applied",
+                          level=LogLevel.FATAL)
+        if not epsilon:
+            self._app.log("Epsilon not given, please give an epsilon value or DP cannot be applied",
+                          level=LogLevel.FATAL)
+        if not noisetype:
+            self._app.log("noisetype not given, please give an noisetype value or DP cannot be applied",
+                          level=LogLevel.FATAL)
+        if epsilon <= 0:
+            self._app.log("invalid epsilon given, epsilon must be a positive number",
+                          level=LogLevel.FATAL)
+        if delta <= 0:
+            self._app.log("invalid delta given, delta must be >= 0",
+                          level=LogLevel.FATAL)
+        if noisetype == DPNoisetype.LAPLACE and delta != 0:
+            self._app.log("When using laplace noise, delta must be set to 0!",
+                          level=LogLevel.FATAL)
+        if noisetype == DPNoisetype.GAUSS:
+            if delta <= 0:
+                self._app.log("When using gauss noise, delta must be >= 0",
+                          level=LogLevel.FATAL)
+            if epsilon >= 1:
+                self._app.log("When using gauss noise, epsilon must be 0 < eps < 1",
+                          level=LogLevel.FATAL)
+
+        self._app.default_dp['serialization'] = 'json'
+        self._app.default_dp['noisetype'] = noisetype.value
+        self._app.default_dp['epsilon'] = epsilon
+        self._app.default_dp['delta'] = delta
+        self._app.default_dp['sensitivity'] = sensitivity
+        self._app.default_dp['clippingVal'] = clippingVal
+
+
 
     def update(self, message: Union[str, None] = None, progress: Union[float, None] = None,
                state: Union[State, None] = None):
@@ -783,6 +920,17 @@ def app_state(name: str, role: Role = Role.BOTH, app_instance: Union[App, None] 
 
     return func
 
+class _NumpyArrayEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            # call default Encoder in other cases
+            return json.JSONEncoder.default(self, obj)
 
 def _serialize_outgoing(data, is_json=False):
     """
@@ -803,7 +951,8 @@ def _serialize_outgoing(data, is_json=False):
     if not is_json:
         return pickle.dumps(data)
 
-    return json.dumps(data)
+    # we use a custom cls to manage numpy which is quite common
+    return json.dumps(data, cls=_NumpyArrayEncoder)
 
 
 def _deserialize_incoming(data: bytes, is_json=False):
@@ -821,7 +970,6 @@ def _deserialize_incoming(data: bytes, is_json=False):
     ----------
     deserialized data
     """
-
     if not is_json:
         return pickle.loads(data)
 
@@ -843,7 +991,6 @@ def _aggregate(data, operation: SMPCOperation):
     ----------
     aggregated value
     """
-
     data_np = [np.array(d) for d in data]
 
     aggregate = data_np[0]
