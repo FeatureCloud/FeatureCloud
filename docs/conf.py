@@ -33,7 +33,8 @@ author = 'author names'
 # ones.
 extensions = ['sphinx.ext.autodoc',
               'numpydoc',
-              'sphinx.ext.viewcode'
+              'sphinx.ext.viewcode',
+              'myst_parser'
              ]
 
 # napoleon settings
