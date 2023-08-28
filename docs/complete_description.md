@@ -1,5 +1,5 @@
 # FeatureCloud Engine
-### Defining states and running applications
+## Defining states and running applications
 
 FeatureCloud provide an advantageous platform to develop Federated applications.
 FeatureCloud includes different components to develop applications in a privacy-preserving fashion and present 
@@ -8,8 +8,7 @@ FeatureCloud community, a testbed to facilitate app development for developers, 
 end-users to run desired workflows containing multiple applications. For registering and testing your apps
 or using other apps, please visit [FeatureCloud.ai](https://featurecloud.ai/). And for more information about
 FeatureCloud architecture, please refer to our paper:
-[The FeatureCloud AI Store for Federated Learning in Biomedicine and Beyond](https://arxiv.org/abs/2105.05734) [[1]](#1).
-
+[The FeatureCloud AI Store for Federated Learning in Biomedicine and Beyond](https://arxiv.org/abs/2105.05734).
 
 FeatureCloud library provides app developers with  `AppState` and `App` classes that are responsible for defining states and executing the app instance, respectively.
 Each app, in the FeatureCloud platform includes multiple states
@@ -61,7 +60,7 @@ After getting noisy data and/or noises, each CP sums up the data and moves the r
 Finally, the coordinator will conclude the aggregation phase.
 SMPC component is part of FeatureCloud Controller, and we encourage developers to have a basic understanding of its application
 to provide the controller with proper SMPC configuration. For more information about the SMPc module, please visit [FeatureCloud.ai](https://featurecloud.ai/)
-or refer to our [paper](https://arxiv.org/abs/2105.05734) [[1]](#1).
+or refer to our [paper](https://arxiv.org/abs/2105.05734).
 
 ```python
 class SMPCType(TypedDict):
@@ -159,6 +158,7 @@ will be accordingly and automatically handled by app instance.
 App developers can decide which parameters should be used SMPC aggregation, and they can inform the controller about the 
 configuration using [`app.configure_smpc`](#configuring-smpc-module-configure_smpc).
 
+(shared-memory-for-states)=
 ### Shared memory for states: `_app.internal`
 Different states can be defined and registered to the app, and they may need to pass data to each other. To support a shared memory
 between different states, the `App` class has an `internal` attribute, a dictionary that can be accessed through 
@@ -241,8 +241,6 @@ All the operations that should be executed as either local calculations or globa
 Depending on the roles, in case both roles are allowed, there can be a different set of operations to handle.
 Meanwhile, developers should call the communication methods, in case it is needed, to communicate. 
 It will be called in [`app.run()`](#executing-states-computation-run) method so that the state perform its operations.
-
-
 
 
 ### Communication methods
@@ -369,10 +367,9 @@ in app level, ever
 ## app instance
 Different parts of the FeatureCloud library should use the same instance of the `App` class. These parts are as follows:
 - States: each state may need to be aware of the [Role](#roles) for carrying on different operations and have access to the app's 
-[`internal`](#shared-memory-for-states-app_internal) for data from other states. Therefore, the same app instance should be used for registering the states.
+[`internal`](#shared-memory-for-states) for data from other states. Therefore, the same app instance should be used for registering the states.
 - api: In the `api` package, through the `bottle` library, the controller informs the app instance about its role, its ID, and ID of other
 clients. The same app instance should be used for that purpose too.
-
 
 ### References
 <a id="1">[1]</a> 

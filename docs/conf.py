@@ -36,12 +36,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.viewcode',
               'myst_parser'
              ]
-
-# napoleon settings
-#napoleon_numpy_docstring = True
-#napoleon_use_param = True
-#napoleon_use_rtype = True
-#napoleon_use_admonition_for_attributes = True
+# myst settings
+myst_heading_anchors = 4
 
 # autodoc settings
 autodoc_member_order = 'alphabetical'
@@ -53,7 +49,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'complete_description_old.rst']
 
 
 # -- Options for HTML output -------------------------------------------------
