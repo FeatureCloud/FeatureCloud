@@ -9,8 +9,8 @@ Welcome to Featurecloud's documentation!
 .. toctree::
    :maxdepth: 2
 
-   quick_start
-   complete_description
+   getting_started.rst
+   privacy_preserving_techniques.rst
    code
 
 

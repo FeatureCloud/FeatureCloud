@@ -1,9 +1,11 @@
-API Connector Python
-================================================
+Code Documentation
+==================
 AppState class
 --------------
+
 .. autoclass:: FeatureCloud.app.engine.app.AppState
    :members:
+   :inherited-members:
 
 Parameters
 ----------

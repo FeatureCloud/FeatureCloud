@@ -474,20 +474,11 @@ class AppState(abc.ABC):
     participant: bool
     coordinator: bool
 
-    Methods
-    -------
-    register()
-    run()
-    register_transition(target, role, name)
-    aggregate_data(operation, use_smpc)
-    gather_data(is_json)
-    await_data(n, unwrap, is_json)
-    send_data_to_participant(data, destination)
-    configure_smpc(exponent, shards, operation, serialization)
-    send_data_to_coordinator(data, send_to_self, use_smpc)
-    broadcast_data(data, send_to_self)
-    update(message, progress, state)
-
+    Properties
+    ----------
+    is_coordinator: bool
+    clients: list[str]
+    id: str
     """
 
     def __init__(self):
@@ -515,14 +506,25 @@ class AppState(abc.ABC):
 
     @property
     def is_coordinator(self):
+        """ Boolean variable, if True the this AppState instance represents the
+        coordinator. False otherwise.
+
+        """
         return self._app.coordinator
 
     @property
     def clients(self):
+        """ Contains a list of client IDs of all clients involved in the
+        current learning run.
+
+        """
         return self._app.clients
 
     @property
     def id(self):
+        """ Contains the id of this client
+        
+        """
         return self._app.id
 
     def register_transition(self, target: str, role: Role = Role.BOTH, name: str or None = None, label: str or None = None):
@@ -693,9 +695,9 @@ class AppState(abc.ABC):
         shards : int, default=0
             number of secrets to be created, if 0, the total number of participants will be used
         operation : SMPCOperation, default=SMPCOperation.ADD
-            operation to perform for aggregation
+            operation to perform for aggregation. Options are SMPCOperation.ADD and SMPCOperation.MULTIPLY
         serialization : SMPCSerialization, default=SMPCSerialization.JSON
-            serialization to be used for the data
+            serialization to be used for the data, currently only the default Option (SMPCSerialization.JSON) is supported
         """
 
         self._app.default_smpc['exponent'] = exponent

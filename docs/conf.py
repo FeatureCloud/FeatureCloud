@@ -22,8 +22,8 @@ sys.path.insert(0, os.path.abspath('../../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'Featurecloud'
-copyright = '2023, author names'
-author = 'author names'
+project_copyright = '2023, Featurecloud'
+author = 'Balázs Orbán, Julian Matschinske, Julian Klemm'
 
 
 # -- General configuration ---------------------------------------------------
@@ -36,6 +36,10 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.viewcode',
               'myst_parser'
              ]
+
+#numpydoc settings
+numpydoc_class_members_toctree = False
+
 # myst settings
 myst_heading_anchors = 4
 
@@ -49,7 +53,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'complete_description_old.rst']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'OLD_complete_description.md']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -63,6 +67,10 @@ html_theme_options = {
     'sidebar_width': '230px',
     'logo': 'fc_logo.svg'
 }
+html_css_files = [
+    'custom.css',
+]
+html_show_sourcelink = False
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
