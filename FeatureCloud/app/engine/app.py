@@ -598,24 +598,34 @@ class AppState(abc.ABC):
             data = self.gather_data(is_json=False)
             return _aggregate(data, operation)  # Data needs to be aggregated according to operation
 
-    def gather_data(self, is_json=False):
+    def gather_data(self, use_smpc=False, use_dp=False, is_json=False):
         """
         Waits for all participants (including the coordinator instance) to send data and returns a list containing the received data pieces. Only valid for the coordinator instance.
 
         Parameters
         ----------
+        use_smpc: bool, default=False
+            Indicated whether the data that is gather was sent using SMPC.
+            If this is not set to True when data was sent using SMPC, this 
+            function ends up in an endless loop
+        use_dp: bool, default=False
         is_json : bool, default=False
-            if True, expects a JSON serialized values and deserializes it accordingly
-            JSON serialization is used with SMPC and DP, so when SMPC or DP was used
-            in the corresponding send_data, is_json should be true.
+            [deprecated] when data was sent via DP or SMPC, the data is sent in
+            JSON serialization. This was used to indicate this but is now 
+            DEPRICATED, use use_smpc/use_dp accordingly instead, they will take
+            care of serialization automatically.
         Returns
         -------
         list of n data pieces, where n is the number of participants
         """
-
         if not self._app.coordinator:
             self._app.log('must be coordinator to use gather_data', level=LogLevel.FATAL)
-        return self.await_data(len(self._app.clients), unwrap=False, is_json=is_json)
+        n = len(self._app.clients)
+        if use_smpc or use_dp:
+            is_json = True
+        if use_smpc:
+            n = 1
+        return self.await_data(n, unwrap=False, is_json=is_json)
 
     def await_data(self, n: int = 1, unwrap=True, is_json=False):
         """
