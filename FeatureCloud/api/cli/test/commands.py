@@ -46,7 +46,7 @@ def help():
               help='A directory name where to download results. This will be created into /data/tests directory (e.g. featurecloud test start --download-results=./results).',
               default='')
 @click.option('--print-logs',
-              help='When selected, will start a test and then monitor it, printing the current status every 3s. When the test is finnished (or has an error), the relevant logs will be outrput. Canceling the command after the test was started will NOT stop the test.',
+              help='When selected, it will monitor the started test by printing the current status every 3s. When the test is finished (or has an error), the relevant logs will be output. Canceling the command after the test was started will NOT stop the test.',
               is_flag=True)
 def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval: str,
           download_results: str, print_logs: bool):
