@@ -598,7 +598,7 @@ class AppState(abc.ABC):
             data = self.gather_data(is_json=False)
             return _aggregate(data, operation)  # Data needs to be aggregated according to operation
 
-    def gather_data(self, use_smpc=False, use_dp=False, is_json=False):
+    def gather_data(self, is_json=False, use_smpc=False, use_dp=False):
         """
         Waits for all participants (including the coordinator instance) to send data and returns a list containing the received data pieces. Only valid for the coordinator instance.
 
