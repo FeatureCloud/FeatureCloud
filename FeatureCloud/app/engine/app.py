@@ -10,6 +10,7 @@ import sys
 import threading
 import traceback
 
+from copy import deepcopy
 from enum import Enum
 from time import sleep
 from typing import Dict, List, Tuple, Union, TypedDict, Literal
@@ -113,8 +114,6 @@ class App:
     status_message: str
     status_progress: float
     status_state: str
-    status_destination: str
-    status_smpc: dict
 
     default_smpc: dict
     default_dp: dict
@@ -152,18 +151,20 @@ class App:
 
         self.thread: Union[threading.Thread, None] = None
 
-        self.status_available: bool = False
         self.status_finished: bool = False
         self.status_message: Union[str, None] = None
         self.status_progress: Union[float, None] = None
         self.status_state: Union[str, None] = None
-        self.status_destination: Union[str, None] = None
-        self.status_smpc: Union[SMPCType, None] = None
-        self.status_dp: Union[DPType, None] = None
+        self.status_queue: List[dict] = []
+        self.status_default = {
+            "available": False,
+            "destination": None,
+            "smpc": None,
+            "dp": None
+        }
 
         self.data_incoming = []
-        self.data_outgoing = [] # list of lists[data, use_smpc_bool, use_dp_bool, destination]
-                                # destination of None sends the data to the coordinator
+        self.data_outgoing = [] # list, each entry is a data object to be send
 
         self.default_smpc: SMPCType = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'exponent': 8}
         self.default_dp: DPType = {'serialization': 'json', 'noisetype': 'laplace',
@@ -258,6 +259,22 @@ class App:
             state = self.states[s]
             state.register()
 
+    def handle_status(self):
+        """ Whenever the current status is updated, this returns the correct
+        status, using a queue of status information to handle also having a
+        queue for outgoing data
+        """
+        status = deepcopy(self.status_default)
+        status["finished"] = self.status_finished
+        status["message"] = self.status_message if self.status_message else (self.current_state.name if self.current_state else None)
+        status["progress"] = self.status_progress
+        status["state"] = self.status_state
+        if len(self.status_queue) > 0:
+            status.update(self.status_queue[0])
+            self.status_queue = self.status_queue[1:]
+        print(json.dumps(status))
+        return json.dumps(status)
+
     def handle_incoming(self, data, client):
         """ When new data arrives, it appends it to the
             `data_incoming` attribute to be accessible for app states.
@@ -275,8 +292,6 @@ class App:
     def handle_outgoing(self):
         """ When it is requested to send some data to other client/s
             it will be called to deliver the data to the FeatureCloud Controller.
-            Then sets status variables (status_*) accordingly for the next data to send from
-            self.data_outgoing
 
         """
         if len(self.data_outgoing) == 0:
@@ -284,17 +299,7 @@ class App:
         data = self.data_outgoing[0]
         self.data_outgoing = self.data_outgoing[1:] # use data_outgoing as queue, sending one data
                                                     # piece at a time
-        if len(self.data_outgoing) == 0:
-            self.status_available = False
-            self.status_destination = None
-            self.status_smpc = None
-            self.status_dp = None
-        else:
-            self.status_available = True
-            self.status_smpc = self.default_smpc if self.data_outgoing[0][1] else None
-            self.status_dp = self.default_dp if self.data_outgoing[0][2] else None
-            self.status_destination = self.data_outgoing[0][3]
-        return data[0]
+        return data
 
     def _register_state(self, name, state, participant, coordinator, **kwargs):
         """ Instantiates a state, provides app-level information and adds it as part of the app workflow.
@@ -627,6 +632,32 @@ class AppState(abc.ABC):
             n = 1
         return self.await_data(n, unwrap=False, is_json=is_json)
 
+    def _await_specific_datapiece(self, fromClient, unwrap=True, is_json=False, last=False):
+        """ Method to wait for exactly one datapiece from the specific Client
+        given in fromClient
+
+        """
+        while True:
+            if len(self._app.data_incoming) > 0:
+                dataIndex = None
+                # find if any data was received from the wanted client
+                for idx, incomingData in enumerate(self._app.data_incoming)_:
+                    # incomingData[0] is the data itself and [1] is the client
+                    # the data was sent from
+                    if incomingData[1] == fromClient:
+                        dataIndex = idx
+                        if not last:
+                            # break at first finding, else check all entries
+                            break
+                if dataIndex:
+                    data = self._app.data_incoming.pop(dataIndex)
+                    if unwrap:
+                        return _deserialize_incoming(data[0], is_json=is_json)
+                    else:
+                        return _deserialize_incoming(data, is_json=is_json)
+
+            sleep(DATA_POLL_INTERVAL)
+
     def await_data(self, n: int = 1, unwrap=True, is_json=False):
         """
         Waits for n data pieces and returns them.
@@ -675,12 +706,15 @@ class AppState(abc.ABC):
         if destination == self._app.id and not use_dp:
             # In no DP case, the data does not have to be sent via the controller
             self._app.data_incoming.append((data, self._app.id))
-        else:
-            self._app.data_outgoing.append((data, False, use_dp, destination))
-            self._app.status_destination = destination
-            self._app.status_smpc = None
-            self._app.status_dp = self._app.default_dp if use_dp else None
-            self._app.status_available = True
+        else:      
+            statusUpdate = dict()
+            statusUpdate["destination"] = destination
+            statusUpdate["smpc"] = None
+            statusUpdate["dp"] = self._app.default_dp if use_dp else None
+            statusUpdate["available"] = True
+            self._app.data_outgoing.append(data)
+            self._app.status_queue.append(statusUpdate)
+            
 
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False,
                                  use_dp=False):
@@ -713,16 +747,18 @@ class AppState(abc.ABC):
                 self._app.data_incoming.append((data, self._app.id))
         else:
             # for SMPC and DP, the data has to be sent via the controller
-            self._app.data_outgoing.append((data, use_smpc, use_dp, None))
+            statusUpdate = dict()
             if use_dp and self._app.coordinator:
                 # give the coordinator as destination,
                 # else, it will be interpreted as a broadcast action
-                self._app.status_destination = self._app.id
+                statusUpdate["destination"] = self._app.id
             else:
-                self._app.status_destination = None
-            self._app.status_smpc = self._app.default_smpc if use_smpc else None
-            self._app.status_dp = self._app.default_dp if use_dp else None
-            self._app.status_available = True
+                statusUpdate["destination"] = None
+            statusUpdate["smpc"] = self._app.default_smpc if use_smpc else None
+            statusUpdate["dp"] = self._app.default_dp if use_dp else None
+            statusUpdate["available"] = True
+            self._app.data_outgoing.append(data)
+            self._app.status_queue.append(statusUpdate)
 
     def broadcast_data(self, data, send_to_self=True, use_dp = False):
         """
@@ -744,20 +780,27 @@ class AppState(abc.ABC):
             self.send_data_to_participant(data,
                                           destination=self.id,
                                           use_dp=True)
-            data = self.await_data(n = 1,
-                                   unwrap=True,
-                                   is_json=True)
+            data = self._await_specific_datapiece(fromClient = self.id,
+                                             unwrap=True,
+                                             is_json=False,
+                                             last=True)
 
         # serialize before broadcast
         data = _serialize_outgoing(data, is_json=False)
-
-        self._app.data_outgoing.append((data, False, False, None))
-        self._app.status_destination = None
-        self._app.status_smpc = None
-        self._app.status_dp = None
-        self._app.status_available = True
+        statusUpdate = dict()
+        statusUpdate["destination"] = None
+            # No destination coming from the coordinator is interpreted as
+            # broadcasting
+        statusUpdate["smpc"] = None
+            # SMPC is only possible in aggregation,e.g. with send_to_coordinator
+        statusUpdate["dp"] = self._app.default_dp if use_dp else None
+            # DP was applied already, see start of method
+        statusUpdate["available"] = True
         if send_to_self:
             self._app.data_incoming.append((data, self._app.id))
+        self._app.data_outgoing.append(data)
+        self._app.status_queue.append(statusUpdate)
+
 
     def configure_smpc(self, exponent: int = 8, shards: int = 0, operation: SMPCOperation = SMPCOperation.ADD,
                        serialization: SMPCSerialization = SMPCSerialization.JSON):
