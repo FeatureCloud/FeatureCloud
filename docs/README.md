@@ -36,3 +36,8 @@ format is comfortable or enough.
 Sphinx probably supports more formats, but `conf.py` must be changed for 
 support for other packages
 
+## Code documentation
+The code documentation is read automatically from the docstrings, so simply 
+change the docstrings of e.g. the AppState class. If you want to add anything 
+else or change the order of the code documentation, checkout `code.rst`
+
