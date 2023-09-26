@@ -1,4 +1,9 @@
 # FeatureCloud pip package
+This pip package is intended to be used with the `FeatureCloud <https://featurecloud.ai/>`_ 
+privacy-preserving platform for federated learning and data-analysis.
+Its purpose is to speed up app development of FeatureCloud apps by providing a
+CLI tool for common operations related to development as well as providing a 
+library for all necessary communication in federated learning.
 ## Install
 ```shell
 pip install featurecloud

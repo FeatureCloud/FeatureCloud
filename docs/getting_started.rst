@@ -1,14 +1,9 @@
 ===============
 Getting Started
 ===============
-This pip package is intended to be used with the `FeatureCloud <https://featurecloud.ai/>`_ 
-privacy-preserving platform for federated learning and data-analysis.
-Its purpose is to speed up app development of FeatureCloud apps by providing a
-CLI tool for common operations related to development as well as providing a 
-library for all necessary communication in federated learning.
 
-Installation
-------------
+The FeatureCloud pip package
+----------------------------
 
 Prerequisites
 ^^^^^^^^^^^^^
@@ -20,7 +15,7 @@ Installation
 ``pip install featurecloud``
 
 Usage
------
+^^^^^
 
 Main commands of the CLI
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28,17 +23,16 @@ Main commands of the CLI
 ========================= ========================= =========================
 Command                   Description               Subcommands
 ========================= ========================= =========================
-**app**                   App related commands      help, build, download, new, plot-states, publish, remove
 **controller**            Controller start/stop     help, logs, ls, start, status, stop
+**app**                   App related commands      help, build, download, new, plot-states, publish, remove
 **test**                  Testbed related commands  help, delete, info, list, logs, start, stop, traffic, workflow
 ========================= ========================= =========================
 
-More details about commands and its subcommands are available in the command 
-line ``--help`` option
+More details about commands and its subcommands are available `here <./pip_package_doc.html>`_
 
 
 Application development
-^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------
 There are two ways to implement applications for FeatureCloud:
 
 - :ref:`App template based development (recommended) <app temp anchor>`
@@ -54,7 +48,7 @@ used.
 .. _app temp anchor:
 
 App template based development (recommended)
-""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1. Create a directory with the wanted template (:ref:`templates <app templates>`), we suggest starting with :ref:`App Four <app four>`
 
@@ -144,7 +138,7 @@ App template based development (recommended)
 * **App Four:** The `App Four template <https://github.com/FeatureCloud/app-four/>`_ contains four states and supports three scenarios (Centralized, Simulation, and Federated) in two modes (Native and Containerized).
 
 Developing applications from scratch (advanced)
-"""""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Steps for creating your federated application from scratch:
 
 1. Using any language of your choice, create a HTTP-Server that accepts requests
