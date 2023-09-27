@@ -1,0 +1,159 @@
+openapi: 3.0.1
+info:
+  title: FeatureCloud App Developer API
+  description: 'This is a sample client of a federated computation in FeatureCloud.'
+  termsOfService: https://featurecloud.ai/privacy-policy
+  contact:
+    email: julian.matschinske@uni-hamburg.de
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+  version: 1.1.0
+externalDocs:
+  description: Find out more about FeatureCloud
+  url: https://featurecloud.ai
+servers:
+  - url: http://127.0.0.1:5000/api/
+tags:
+  - name: setup
+    description: When the participants are ready to start the federated execution, the platform will send the `/setup` request. This is the starting point of the federated execution, the app can use it as a trigger to start the computation based on it's local data. In this call, each participant gets an `id`, an array of the participating `clients` and the information if they are the `coordinator`.
+  - name: status
+    description: With the response to this request the federated app reports its current `/status`. It is frequently sent and indicates if there is data `available` to be transferred to the coordinator (from participant), data to be broadcasted to the participants (from coordinator) or if the execution of the app is `finished`. Furthermore, it supports a message that is shown to the user, an estimation of the current progress and the state of the execution. If `available` has been set to `true`, a consecutive `GET /data` call is triggered, fetching the data. If `finished` has been set to `true` at the coordinator instance, all containers of the workflow are shut down.
+  - name: data
+    description: Exchange `/data` between clients and coordinator. The platform reads the `data` and redirects in the following way, depending on the sender. If the data is coming from a participant, it will be sent to the coordinator. If the data is coming from a coordinator, it will be broadcast to all other participants.
+paths:
+  /setup:
+    post:
+      tags:
+        - setup
+      summary: Setup the local client and trigger start of local execution
+      operationId: setup
+      requestBody:
+        description: Setup object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Setup'
+        required: true
+      responses:
+        200:
+          description: Success
+          content: {}
+      x-codegen-request-body-name: body
+  /status:
+    get:
+      tags:
+        - status
+      summary: Status of the local client
+      operationId: status
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+      x-codegen-request-body-name: body
+  /data:
+    get:
+      tags:
+        - data
+      summary: Receive data from coordinator or other clients
+      operationId: dataGet
+      responses:
+        200:
+          description: Success
+          content:
+            application/octet-stream:
+              schema:
+                type: "string"
+                format: "binary"
+              example: {1, 2, 3, 4, 5}
+      x-codegen-request-body-name: body
+    post:
+      tags:
+        - data
+      summary: Send data to coordinator or broadcast data from coordinator to other clients
+      operationId: dataPost
+      requestBody:
+        description: Data object
+        content:
+          application/octet-stream:
+            schema:
+              type: "string"
+              format: "binary"
+            example: {1, 2, 3, 4, 5}
+        required: true
+      responses:
+        200:
+          description: Success
+          content: {}
+      x-codegen-request-body-name: body
+components:
+  schemas:
+    Setup:
+      required:
+        - id
+        - coordinator
+        - clients
+      type: object
+      properties:
+        id:
+          type: string
+          example: 1
+        coordinator:
+          type: boolean
+          example: true
+        clients:
+          type: array
+          items:
+            type: string
+    Status:
+      required:
+        - available
+        - finished
+      type: object
+      properties:
+        available:
+          type: boolean
+          example: false
+        finished:
+          type: boolean
+          example: false
+        message:
+          type: string
+          maxLength: 40
+          example: Computing local parameters
+        progress:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.1
+        state:
+          type: string
+          enum: [running, error, action_required]
+          example: running
+        destination:
+          type: string
+          example: 1
+        smpc:
+          type: object
+          properties:
+            operation:
+              type: string
+              enum: [add]
+              example: add
+            serialization:
+              type: string
+              enum: [json]
+              example: json
+            shards:
+              type: number
+              format: int
+              minimum: 0
+              example: 2
+            exponent:
+              type: number
+              format: int
+              example: 8
