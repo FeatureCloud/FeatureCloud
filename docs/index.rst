@@ -12,7 +12,8 @@ Welcome to Featurecloud's documentation!
    getting_started.rst
    pip_package_doc.md
    privacy_preserving_techniques.rst
-   code
+   code.rst
+   API.rst
 
 
 Indices and tables
