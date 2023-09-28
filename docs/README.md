@@ -1,7 +1,7 @@
 How to use Sphinx for Documentation:
 # prerequisites
-The packages that are imported in `conf.py` must be installed.
-Also, python is therefore also necessary
+The packages that are mentioned in `conf.py` in the variable `extensions` must be installed.
+Therefore, also Python3 is needed.
 
 # Building the html
 Simply run

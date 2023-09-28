@@ -15,7 +15,8 @@ This documentation is intended to be used by developers who are working on appli
    getting_started.rst
    pip_package_doc.md
    privacy_preserving_techniques.rst
-   code
+   code.rst
+   API.rst
 
 
 Indices and tables
