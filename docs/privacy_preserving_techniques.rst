@@ -4,9 +4,9 @@ Privacy-preserving techniques
 
 SMPC (Secure MultiParty Computation)
 ------------------------------------
-SMPC is a technique that allows the secure sharing of data, only making aan aggregated
+SMPC is a technique that allows the secure sharing of data, only making an aggregated
 version of the data visible to the coordinator.
-Without SMPC, the coordinator would get data from each client.
+Without SMPC, the coordinator gets data from each client.
 When using SMPC, the clients split the data they have into a masked model (*data-mask*)
 and the *mask* itself. The masked model and the mask then get sent to different clients.
 The clients split their data as described above n times (with different masks), which is described as
@@ -15,15 +15,39 @@ the number of *shards*.
 
 Usage
 ^^^^^
-As with general app development as described in :doc:`getting_started`
+As with general app development as described in :doc:`getting_started`, either
+an app template can be used or development can be done from scratch.
 
 App template based development(recommended)
 """""""""""""""""""""""""""""""""""""""""""
 1. First, SMPC must be configured. Use 
    :meth:`this method <FeatureCloud.app.engine.app.AppState.configure_smpc>`
-   for configuration. 
+   for configuration. The following parameters can be set.
+
+   * *exponent*: Any floating point value has to be converted to an integer and
+     back, the *exponent* describes how many digits of the float are conserved 
+     during SMPC. 
+     Technically the conversion of float is the following:
+     :math:`int(float * 10^exponent)`, e.g. 1035.3967 with *exponent*=5 gets converted to
+     10353 and converted back to 1035.3, meaning the loss of all digits after 
+     the first 5. 
+
+   * *shards*: decides the number of times the data is split. A value of 0 means 
+     each client splits the data num_clients times. 
+     We recommended just using the default value.
+
+   * *operation*: describes the Operation used for aggregation of the data, see
+     :meth:`here <FeatureCloud.app.engine.app.AppState.configure_smpc>` for all
+     options.
+
+   * *serialization*: describes the serialization used when sending the data,
+     see all options 
+     :meth:`here <FeatureCloud.app.engine.app.AppState.configure_smpc>`.
+     We recommended the default value.
+
 2. SMPC can now be used whenever sending data to the coordinator 
    :meth:`send_data_to_coordinator <FeatureCloud.app.engine.app.AppState.send_data_to_coordinator>`
+
 3. As serialization might differ when data was sent using SMPC, the corresponding 
    functions gathering the data as the data must also be informed that the data
    was sent using SMPC. This affects the following methods:
@@ -45,6 +69,44 @@ Furthermore, it should be considered that when SMPC is used, the *controller* wi
 aggregate data according to the `operation` option given in the status call.
 Then, the ONE aggregated package will be send to the application and will be serialized
 as given by `serialization`. 
-*In conclusion that means that only ONE model will be posted and that model will be serialized according to `serialization`.*
+*In conclusion that means that only ONE model will be send (via the POST request)
+and that model will be serialized according to `serialization`.*
 
+
+DP (Differential Privacy)
+-------------------------
 .. TODO: DP
+
+Differential privacy describes a privacy enhancing technique that conceils the
+contribution of each individual row of data. This is achieved by adding noise.
+
+Usage
+^^^^^
+As with general app development as described in :doc:`getting_started`, either
+an app template can be used or development can be done from scratch.
+
+App template based development(recommended)
+"""""""""""""""""""""""""""""""""""""""""""
+1. First, DP must be configured. Use 
+   :meth:`this method <FeatureCloud.app.engine.app.AppState.configure_dp>`
+   for configuration. The following parameters can be set.
+
+   * *noisetype*: describes the distribution from which noise is drawn. See
+     :meth:`here <FeatureCloud.app.engine.app.AppState.configure_dp>` for all 
+     possible distributions.
+
+   * *epsilon* describes the *epsilon* privacy budget value. Please refer to 
+     this section (#TODO add section link) for information on choosing *epsilon*
+
+   * *delta* describes the *delta* privacy budget value. Must be 0 for laplacian
+     noise, and should be of a smaller scale than :math:`\frac{1}{num_rows}`, 
+     where num_rows is the amount of rows in the data used to train the model
+     that is send out. See this section (#TODO: add link) for more information
+
+   * *sensitivity*
+
+
+Developing applications from scratch (advanced)
+"""""""""""""""""""""""""""""""""""""""""""""""
+
+
