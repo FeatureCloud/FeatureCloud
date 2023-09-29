@@ -138,7 +138,7 @@ Commands to test app (or workflow of apps) execution:
   ```shell 
   featurecloud test traffic --controller-host=http://localhost:8000 --test-id=1 format=json
   ```
-* workflow: Subcommands to manage running a test workflow. ([Read more](#workflow-command))
+* workflow: Subcommands to manage running a test workflow. ([Read more](#test-workflow-command))
   * controller-host: Address of the running controller instance. *[required]*
   * wf-dir: Path to the directory containing the workflow. *[required]*
   * wf-file: Python `.py` file including the workflow. *[required]*
@@ -147,7 +147,7 @@ Commands to test app (or workflow of apps) execution:
   ```shell
   sudo featurecloud test workflow start --wf-dir <WORKFLOW_FILE_Path> --wf-file <NAME> --controller-host <CONTROLLER> --channel <> --query-interval <>
   ```
-## Workflow command
+## Test Workflow command
 Implementing flexible non-linear workflows in FeatureCloud platform
 
 ### FeatureCloud Workflow
