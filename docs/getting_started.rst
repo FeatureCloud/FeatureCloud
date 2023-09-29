@@ -2,8 +2,9 @@
 Getting Started
 ===============
 
-The FeatureCloud pip package
-----------------------------
+The FeatureCloud CLI
+--------------------
+The FeatureCloud CLI tool is available as a pip package.
 
 Prerequisites
 ^^^^^^^^^^^^^

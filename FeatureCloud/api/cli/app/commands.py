@@ -168,7 +168,7 @@ def plot_diagram(path: str, package: str, states: str, plot_name: str):
 
     Plot_name is the name of the plotted diagram file
 
-    Example: featurecloud app plot /home/my-app mystates --states states.py --plot_name myplot
+    Example: featurecloud app plot-states /home/my-app mystates --states states.py --plot_name myplot
     """
     try:
         commands.plot_state_diagram(**{k: v for k, v in locals().items() if v})
