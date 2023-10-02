@@ -798,7 +798,12 @@ class AppState(abc.ABC):
         delta : float, default = 0.0
             the delta value determining how much privacy is wanted. Should be 0
             when using laplace noise (noisetype=DPNoisetype.LAPLACE)
-        clippingVal : float, 10.0
+        sensitivity: float, default = None
+            describes the amount of privacy introduced by the function used on 
+            the data that was used to create the model that is send with DP.
+            Depends on the function or on the function and the data.
+            If using a clippingVal, the sensitivity must not be defined.
+        clippingVal : float, default = 10.0
             Determines the scaling down of values sent via the controller.
             if e.g. an array of 5 numeric values ( 5 weights) is sent via the
             controller and clippingVal = 10.0 is choosen, then the p-norm of all
@@ -818,7 +823,10 @@ class AppState(abc.ABC):
                           'no clipping of models is wanted. In that case, ' +\
                           'a sensitivity value is needed to use DP',  level=LogLevel.FATAL)
         if not delta:
-            self._app.log("Delta not given, please give a delta value or DP cannot be applied",
+            if noisetype == DPNoisetype.LAPLACE:
+                delta = 0
+            else:
+                self._app.log("Delta not given, please give a delta value or DP cannot be applied",
                           level=LogLevel.FATAL)
         if not epsilon:
             self._app.log("Epsilon not given, please give an epsilon value or DP cannot be applied",
@@ -837,10 +845,7 @@ class AppState(abc.ABC):
                           level=LogLevel.FATAL)
         if noisetype == DPNoisetype.GAUSS:
             if delta <= 0:
-                self._app.log("When using gauss noise, delta must be >= 0",
-                          level=LogLevel.FATAL)
-            if epsilon >= 1:
-                self._app.log("When using gauss noise, epsilon must be 0 < eps < 1",
+                self._app.log("When using gauss noise, delta must be > 0",
                           level=LogLevel.FATAL)
 
         self._app.default_dp['serialization'] = 'json'
