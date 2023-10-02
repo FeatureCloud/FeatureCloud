@@ -137,6 +137,8 @@ App template based development (recommended)
 
 * **App Four:** The `App Four template <https://github.com/FeatureCloud/app-four/>`_ contains four states and supports three scenarios (Centralized, Simulation, and Federated) in two modes (Native and Containerized).
 
+.. _getting started dev from scratch anchor:
+
 Developing applications from scratch (advanced)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Steps for creating your federated application from scratch:
@@ -164,11 +166,11 @@ Steps for creating your federated application from scratch:
 
 Additional features of FeatureCloud
 -----------------------------------
-.. TODO! Just this list, keep it short and just reference to the real stuff
-   GPU
-   Using privacy-preserving techniques (SMPC and DP)
-   Offering a frontend to users
-   More Features?
+1. Privacy enhancing techniques:
+
+   * :ref:`Secure MultiParty Computation (SMPC) <smpc anchor>`
+
+   * :ref:`Differential Privacy (DP) <dp anchor>`
 
 Links to blog articles
 ----------------------

@@ -847,9 +847,6 @@ class AppState(abc.ABC):
             if delta <= 0:
                 self._app.log("When using gauss noise, delta must be > 0",
                           level=LogLevel.FATAL)
-            if epsilon >= 1:
-                self._app.log("When using gauss noise, epsilon must be 0 < eps < 1",
-                          level=LogLevel.FATAL)
 
         self._app.default_dp['serialization'] = 'json'
         self._app.default_dp['noisetype'] = noisetype.value
