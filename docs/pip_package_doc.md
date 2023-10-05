@@ -186,7 +186,7 @@ a test app in the test-bed. Accordingly, all the functionalities are applied to 
 #### Generate paths to data and results dirs
 `def create_paths(self, ctrl_data_path: str, ctrl_test_path: str)`: Generate paths to directories containing the app's data(for each client)
 And also for app's results.
-```angular2html
+```
 Parameters
 ----------
 ctrl_data_path: str
@@ -198,7 +198,7 @@ ctrl_test_path: str
 `def copy_results(self, ctrl_data_path: str, dest_generic: str, dest_clients: list, default_res_name: str)`:
 Copy results of the app to as the data to the directory of the next app.
 
-```angular2html
+```
 Parameters
 ----------
 ctrl_data_path: str
@@ -253,7 +253,7 @@ For implementing a desired workflow, developers should extend `TestWorkFlow` cla
 The name of the extended class should always be `WorkFlow` and it asks for the controller address, channel, and query interval for querying the controller.
 After implementing the workflow, developers can run it using FeatureCloud pip package:
 
-```angular2html
+```shell
 sudo featurecloud test workflow start --wf-dir <WORKFLOW_FILE_Path> --wf-file <NAME> --controller-host <CONTROLLER> --channel <> --query-interval <>
 ```
 
