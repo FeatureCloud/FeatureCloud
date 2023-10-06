@@ -13,13 +13,6 @@ This is a sample client of a federated computation in FeatureCloud.
 | GET | [/data](#getdata) | Receive data from coordinator or other clients |
 | POST | [/data](#postdata) | Send data to coordinator or broadcast data from coordinator to other clients |
 
-## Reference Table
-
-| Name | Path | Description |
-| --- | --- | --- |
-| Setup | [#/components/schemas/Setup](#componentsschemassetup) |  |
-| Status | [#/components/schemas/Status](#componentsschemasstatus) |  |
-
 ## Path Details
 
 ***
@@ -116,34 +109,3 @@ Send data to coordinator or broadcast data from coordinator to other clients
 #### Responses
 
 - 200 Success
-
-## References
-
-### #/components/schemas/Setup
-
-```ts
-{
-  id: string
-  coordinator: boolean
-  clients?: string[]
-}
-```
-
-### #/components/schemas/Status
-
-```ts
-{
-  available: boolean
-  finished: boolean
-  message?: string
-  progress?: number
-  state?: enum[running, error, action_required]
-  destination?: string
-  smpc: {
-    operation?: enum[add]
-    serialization?: enum[json]
-    shards?: number
-    exponent?: number
-  }
-}
-```
