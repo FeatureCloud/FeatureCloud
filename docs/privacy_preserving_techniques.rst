@@ -79,20 +79,18 @@ Developing applications from scratch (advanced)
 To use SMPC, when sending data to the coordinator, when answering *GET /status*, 
 the response must contain the smpc option::
 
-  "smpc": {
-
-      "operation": "[add|multiply]",
-      "serialization": "json",
-      "shards": float,
-      "exponent": float
-
+  smpc: {
+    operation: enum[add, multiply] 
+    serialization?: enum[json] // default is json
+    shards?: number // default is number of participants including coordinator
+    exponent?: number // default is 8
   }
 
 See the :ref:`information in app template based development <smpc vars anchor>`
 for more information on setting the variables. In difference to this, shards
 cannot be set to 0 to use number_clients shards. Instead, the number of clients
-must directly be used as the value for shards. The data must be serialized
-as defined in the *serialization* variable.
+must directly be used as the value for shards. 
+The data must be serialized as defined in the `serialization` variable.
 
 Furthermore, it should be considered that when SMPC is used, the *controller* will
 aggregate data according to the `operation` option given in the status call.
@@ -100,6 +98,10 @@ Then, the ONE aggregated package will be send to the application and will be ser
 as given by `serialization`. 
 In conclusion that means that only ONE model will be send (via the *POST /data* 
 request) and that model will be serialized according to *serialization*.
+
+We suggest only giving the parameter operation and exponent. Not giving the 
+parameters shards and serialization will use the default values,
+JSON for `serialization` and number_clients for `shards`.
 
 .. _dp anchor:
 
@@ -170,14 +172,16 @@ Please follow the general steps for developing an app as given in
 However, your application should add the following parameters to the 
 response body of the *GET /status* request::
 
-  "dp": {
-      "serialization": "json",
-      "noisetype": "[laplace|gauss]",
-      "epsilon": <epsilon as float>,
-      "delta": <delta as float>,
-      "sensitivity": <sensitivity as float or null>,
-      "clippingVal": <clipping value as float or null>
-  }  
+  dp: {
+    serialization?: enum[json] // default is json
+    noisetype?: enum[laplace, gauss] // default is laplace
+    epsilon?: float // default is 0.99999
+    delta?: float // default is 0 for laplace noise and 0.01 for gauss noise
+    sensitivity?: float 
+    clippingVal?: float 
+      // default is 10.0 and only set if neither
+      // clippingVal nor sensitivity are given
+  }
 
 :ref:`See here for a quick
 guide on how to choose these parameters. <parameter guide anchor>`

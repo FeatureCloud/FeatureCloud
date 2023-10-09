@@ -16,7 +16,11 @@ implementing the API given here:
 3. Receiving data: Receiving the data sent in step 2 from another client
    happens via the [POST/data?client](#postdataclient) call.
 
-The sample client should listen to localhost on port 5000.
+The sample client should listen to localhost on port 5000. All calls described
+here should be served under the `/api` route.
+The sample client should also support the `/web` route, answering
+`GET/web` request with a simple string of the current status of the local
+client.
 
 ## Path Table
 

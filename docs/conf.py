@@ -34,7 +34,8 @@ author = 'Balázs Orbán, Julian Matschinske, Julian Klemm'
 extensions = ['sphinx.ext.autodoc',
               'numpydoc',
               'sphinx.ext.viewcode',
-              'myst_parser'
+              'myst_parser',
+              'sphinx.ext.intersphinx'
              ]
 
 #numpydoc settings

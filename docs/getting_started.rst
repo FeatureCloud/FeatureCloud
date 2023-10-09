@@ -145,11 +145,12 @@ Developing applications from scratch (advanced)
 Steps for creating your federated application from scratch:
 
 1. Using any language of your choice, create a HTTP-Server that accepts requests
-   from the *controller*. 
-   
-.. TODO: create API Spezifications and link them, create them from OPENAPI document
-   TODO: talk about the ports as well, controller querries port 9000 and 9001 somehow, 
-   also Docker conditions the app must uphold so the controller finds it?
+   from the *controller*. To do that, the HTTP-Server should listen to localhost
+   on port 5000. It must support the API as 
+   :doc:`documented in the API documentation <API>`. The api must be implemented
+   on the route `/api`. Furthermore, the route `/web` has to be supported for
+   `GET/web` requests. The response to `GET/web` is a simple text string 
+   with the current status.
 
 2. Build Docker image from your application: ``docker build --no-cache -t my-app ./my-app``
 
