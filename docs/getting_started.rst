@@ -55,7 +55,7 @@ App template based development (recommended)
 
 ``featurecloud app new --template-name=app-four my-app``
 
-2. Implement your own application using the template TODO: add a link for more info
+1. Implement your own application using the template
     * *Implementation of the app logic:* The implementation itself happens in `states.py`. 
       
       * You may use (and we recommended using) *states*.  Any state must have the 
@@ -88,9 +88,9 @@ App template based development (recommended)
       and :meth:`self.update <FeatureCloud.app.engine.app.AppState.update>`
     
     For more information, checkout the :meth:`code documentation <FeatureCloud.app.engine.app.AppState>`
-    and the recommended :ref:`template app four <app four>`
+    and an app template, e.g checkout :ref:`template app dice <app dice>`
 
-3. Build your application (creates a docker image of the application)
+2. Build your application (creates a docker image of the application)
 
 ``featurecloud app build ./my-app my-app``
 
@@ -132,9 +132,9 @@ App template based development (recommended)
 
 * **App round:** The `App round template <https://github.com/FeatureCloud/app-round/>`_ is based in the blank app template with three app states implemented.
 
-* **Dice app:** The `Dice app template <https://github.com/FeatureCloud/app-dice/>`_ contains four states with a simple dice throw simulation.
+.. _app dice:
 
-.. _app four:
+* **Dice app:** The `Dice app template <https://github.com/FeatureCloud/app-dice/>`_ contains four states with a simple dice throw simulation.
 
 * **App Four:** The `App Four template <https://github.com/FeatureCloud/app-four/>`_ contains four states and supports three scenarios (Centralized, Simulation, and Federated) in two modes (Native and Containerized).
 
