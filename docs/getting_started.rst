@@ -51,9 +51,9 @@ used.
 App template based development (recommended)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. Create a directory with the wanted template (:ref:`templates <app templates>`), we suggest starting with :ref:`App Four <app four>`
+1. Create a directory with the wanted template (:ref:`templates <app templates>`)
 
-``featurecloud app new --template-name=app-four my-app``
+``featurecloud app new --template-name=app-blank my-app``
 
 1. Implement your own application using the template
     * *Implementation of the app logic:* The implementation itself happens in `states.py`. 
@@ -88,7 +88,8 @@ App template based development (recommended)
       and :meth:`self.update <FeatureCloud.app.engine.app.AppState.update>`
     
     For more information, checkout the :meth:`code documentation <FeatureCloud.app.engine.app.AppState>`
-    and an app template, e.g checkout :ref:`template app dice <app dice>`
+    and an app template, e.g checkout :ref:`template app dice <app dice>`.
+    Alternatively, you can also check the :ref:`example provided here <example states>`
 
 2. Build your application (creates a docker image of the application)
 
@@ -137,6 +138,88 @@ App template based development (recommended)
 * **Dice app:** The `Dice app template <https://github.com/FeatureCloud/app-dice/>`_ contains four states with a simple dice throw simulation.
 
 * **App Four:** The `App Four template <https://github.com/FeatureCloud/app-four/>`_ contains four states and supports three scenarios (Centralized, Simulation, and Federated) in two modes (Native and Containerized).
+
+.. _example states:
+
+**Example of states.py**
+::
+
+  # A simple example for a typical federated learning app
+  from FeatureCloud.app.engine.app import AppState, app_state, Role, LogLevel
+
+  # an intial state for loading the data, this state MUST always be implemented
+  @app_state("initial")
+  class InitialState(AppState): # you can choose any fitting classname
+    def register(self):
+      # here, any possible change to another state must be documented
+      self.register_transition("local_computation", Role.BOTH)
+        # Role.BOTH means that this transition can be done by
+        # the coordinator and a participant
+        # Other options are Role.PARTICIPANT and Role.COORDINATOR
+    def run(self):
+      # Here you can for example load the config file and the data
+      # Any data given by the user will always be placed in the directory
+      # given in the line below (<workind_dir>/mnt/input)
+      dataFile = os.path.join(os.getcwd(), "mnt", "input", "data.csv"))
+      data = pd.read_csv(dataFile)
+      # Data can be stored for access in other states like this
+      self.store(key = "data", value=data)
+      # Also store some intial model
+      self.store(key = "model", value=np.zeros(5))
+      # to progress to another state, simply return the states name
+      return "local_computation"
+
+  # a state for the local computation
+  @app_state
+  class local_computation(AppState):
+    def register(self):
+      self.register_transition("aggregate_data", Role.COORDINATOR)
+      self.register_transition("obtain_weights", Role.PARTICIPANT)
+
+    def run(self):
+      # do some local computations
+      model = calculateThings(self.load("data"), self.load("model"))
+        # loads the data and calculates some model
+      self.send_data_to_coordinator(model,
+                                  send_to_self=True,
+                                  use_smpc=False)
+      if self.is_coordinator:
+        return "aggregate"
+      else:
+        return "obtain_weights"
+
+  # a state just for obtaining the weights from the coordinator
+  @app_state("obtain_weights")
+  class obtainWeights(AppState):
+    def register(self):
+      self.register_transition("local_computation", Role.BOTH)
+
+    def run(self):
+      updated_model = self.await_data(n = 1)
+        # n=1 since we only expect one model from the coordinator
+      self.store("model", updated_model)
+      return "local_computation"
+
+  # a state for the coordinator to aggregate all weights
+  @app_state("aggregate_data")
+  class aggregateDataState(AppState):
+    def register(self):
+      self.register_transition("obtain_weights", Role.COORDINATOR)
+      self.register_transition("terminal", Role.COORDINATOR)
+    def run(self):
+      aggregated_model = self.aggregate_data(operation = SMPCOperation.ADD)
+        # waits for every participant to send something and then
+        # adds them together
+      updated_model = aggregated_model / len(self.clients)
+      if stop_training_criteria: # if the training is done
+        fp = open(os.path.join("mnt", "output", "trained_model.pyc"), "wb")
+        np.save(fp, updated_model)
+        return "terminal"
+          # going to the terminal state will finnish the app and tell
+          # all clients that the computation is done
+      else:
+        self.broadcast_data(updated_model, send_to_self = True)
+        return "obtain_weights"
 
 .. _getting started dev from scratch anchor:
 
