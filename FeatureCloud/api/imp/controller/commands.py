@@ -17,7 +17,7 @@ LOG_FETCH_INTERVAL = 3  # seconds
 LOG_LEVEL_CHOICES = ['debug', 'info', 'warn', 'error', 'fatal']
 
 
-def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: bool, mount: str):
+def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: bool, mount: str, blockchain_address: str):
     client = get_docker_client()
 
     data_dir = data_dir if data_dir else DEFAULT_DATA_DIR
@@ -58,6 +58,10 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
         device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
         gpu_command = '--has-gpu'
 
+    blockchain_command = ''
+    if blockchain_address:
+        blockchain_command = f'--blockchain-address={blockchain_address}'
+
     volumes = [f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock']
     if mount:
         volumes.append(f'{mount}:/mnt')
@@ -72,7 +76,7 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
             volumes=volumes,
             labels=[CONTROLLER_LABEL],
             device_requests=device_requests,
-            command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command}"
+            command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command} {blockchain_command}"
         )
     except docker.errors.DockerException as e:
         raise FCException(e)

@@ -19,7 +19,8 @@ def controller() -> None:
 @click.option('--gpu', help='Start controller with GPU access. If this succeeds, controller can allow GPU access for apps.', default=False, required=False)
 @click.option('--mount', help='Use this option when you want mount a folder that is available only to the '
                               'controller\'s protected environment, e.g. to upload input data for apps.', default='', required=False)
-def start(name: str, port: int, data_dir: str, controller_image, gpu: bool, mount: str) -> None:
+@click.option('--blockchain-address', help='Address of application that connects to the blockchain system', default='', required=False)
+def start(name: str, port: int, data_dir: str, controller_image, gpu: bool, mount: str, blockchain_address: str) -> None:
     """Start a controller instance.
 
     NAME is the controller instance name
@@ -27,7 +28,7 @@ def start(name: str, port: int, data_dir: str, controller_image, gpu: bool, moun
     Example: featurecloud controller start my-fc-controller --gpu=True
     """
     try:
-        commands.start(name, port, data_dir, controller_image, gpu, mount)
+        commands.start(name, port, data_dir, controller_image, gpu, mount, blockchain_address)
         click.echo(f'Started controller: {name}')
     except FCException as e:
         if str(e).find("port is already allocated") > -1:
