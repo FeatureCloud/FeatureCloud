@@ -1,9 +1,10 @@
 import click
+from importlib.metadata import version  
 from FeatureCloud.api.cli.test.commands import test
 from FeatureCloud.api.cli.controller.commands import controller
 from FeatureCloud.api.cli.app.commands import app
 
-
+@click.version_option(version=version("featurecloud"))
 @click.group('first-level')
 def fc_cli() -> None:
     """FeatureCloud pip package"""
