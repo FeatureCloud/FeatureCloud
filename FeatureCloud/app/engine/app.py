@@ -9,6 +9,7 @@ import pickle
 import sys
 import threading
 import traceback
+from copy import deepcopy
 
 from enum import Enum
 from time import sleep
@@ -119,7 +120,7 @@ class App:
     default_smpc: dict
     default_dp: dict
 
-    data_incoming: list
+    data_incoming: dict
     data_outgoing: list
     thread: threading.Thread
 
@@ -149,21 +150,19 @@ class App:
         self.id = None
         self.coordinator = None
         self.clients = None
-
+        self.default_memo = None
         self.thread: Union[threading.Thread, None] = None
 
-        self.status_available: bool = False
-        self.status_finished: bool = False
-        self.status_message: Union[str, None] = None
-        self.status_progress: Union[float, None] = None
-        self.status_state: Union[str, None] = None
-        self.status_destination: Union[str, None] = None
-        self.status_smpc: Union[SMPCType, None] = None
-        self.status_dp: Union[DPType, None] = None
-
-        self.data_incoming = []
-        self.data_outgoing = [] # list of lists[data, use_smpc_bool, use_dp_bool, destination]
-                                # destination of None sends the data to the coordinator
+        self.data_incoming = {}
+            # dictionary mapping memo: [(data, client),...]
+            # data is the data serialized with JSON when SMPC or DP is used, 
+            # otherwise serialized the way that the sender used (usually pickle)
+            # client is the id of the client that sent the data
+            # memo is the memo send alongside the data to identify to which
+            # comunication round the data belongs to
+        self.data_outgoing = [] 
+            # list of all data objects and the corresponding status to use with them
+            # format: list of tuples, each tuple contains dataObject, statusObject
 
         self.default_smpc: SMPCType = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'exponent': 8}
         self.default_dp: DPType = {'serialization': 'json', 'noisetype': 'laplace',
@@ -181,6 +180,24 @@ class App:
 
         self.internal = {}
 
+        # the default status should just contain the uptodate message, progress
+        # etc, but always have available set to False
+        # this object should be deepcopied when setting the status for outgoing 
+        # data
+        self.default_status = {
+            'available': False,
+            'finished': False,
+            'message': None,
+            'progress': None,
+            'state': None,
+            'destination': None,
+            'smpc': None,
+            'dp': None,
+            'memo': None
+        }
+
+        self.last_send_status = deepcopy(self.default_status)
+        
         # Add terminal state
         @app_state('terminal', Role.BOTH, self)
         class TerminalState(AppState):
@@ -215,6 +232,7 @@ class App:
         if not self.current_state:
             self.log('initial state not found', level=LogLevel.FATAL)
 
+        self.default_status["state"] = self.current_state
         self.thread = threading.Thread(target=self.guarded_run)
         self.thread.start()
 
@@ -226,9 +244,13 @@ class App:
             self.run()
         except Exception as e:  # catch all  # noqa
             self.log(traceback.format_exc())
-            self.status_message = e.__class__.__name__
-            self.status_state = State.ERROR.value
-            self.status_finished = True
+            status = deepcopy(self.default_status)
+            status["message"] = e.__class__.__name__
+            status["state"] = State.ERROR.value
+            status["finished"] = True
+            self.data_outgoing = [(None, status)]
+              # remove ANY data in the pipeline and crash the workflow 
+              # on the next poll
 
     def run(self):
         """    Runs the workflow, logs the current state, executes it,
@@ -242,10 +264,13 @@ class App:
             self.log(f'transition: {transition}')
             self.transition(f'{self.current_state.name}_{transition}')
             if self.current_state.name == 'terminal':
-                self.status_progress = 1.0
+                # replace any outgoing data with no data and a finished status
+                self.default_status["progress"] = 1.0
                 self.log('done')
+                self.data_outgoing = [(None, deepcopy(self.default_status))] 
                 sleep(TERMINAL_WAIT)
-                self.status_finished = True
+                self.default_status["finished"] = True
+                self.data_outgoing = [(None, deepcopy(self.default_status))] 
                 return
             sleep(TRANSITION_WAIT)
 
@@ -258,7 +283,7 @@ class App:
             state = self.states[s]
             state.register()
 
-    def handle_incoming(self, data, client):
+    def handle_incoming(self, data, client, memo):
         """ When new data arrives, it appends it to the
             `data_incoming` attribute to be accessible for app states.
 
@@ -270,8 +295,30 @@ class App:
             Id of the client that Sent the data
 
         """
-        self.data_incoming.append((data, client))
+        if memo not in self.data_incoming:
+            self.data_incoming[memo] = [(data, client)]
+        else:
+            self.data_incoming[memo].append((data, client))
 
+    def handle_status(self):
+        """ This informs if there is any data to be sent as well as the way
+            data should be send
+        """
+        self.default_status["message"] = self.status_message if self.status_message else (self.current_state.name if self.current_state else None)
+        # ensure that some message is set 
+        if len(self.data_outgoing) == 0:
+            # no data to send, just return the default status with available=false
+            return json.dumps(self.default_status)
+        
+        # else take the status from the data to be sent out next. The whole 
+        # data, status combination gets popped in the next handle_outgoing 
+        # function call by the next GET request from the controller, so here 
+        # the status and data itself must still be kept in the list
+
+        _, status = self.data_outgoing[0]
+        self.last_send_status = deepcopy(status)
+        return json.dumps(status)
+        
     def handle_outgoing(self):
         """ When it is requested to send some data to other client/s
             it will be called to deliver the data to the FeatureCloud Controller.
@@ -280,21 +327,25 @@ class App:
 
         """
         if len(self.data_outgoing) == 0:
+            # no data to send
             return None
-        data = self.data_outgoing[0]
-        self.data_outgoing = self.data_outgoing[1:] # use data_outgoing as queue, sending one data
-                                                    # piece at a time
-        if len(self.data_outgoing) == 0:
-            self.status_available = False
-            self.status_destination = None
-            self.status_smpc = None
-            self.status_dp = None
-        else:
-            self.status_available = True
-            self.status_smpc = self.default_smpc if self.data_outgoing[0][1] else None
-            self.status_dp = self.default_dp if self.data_outgoing[0][2] else None
-            self.status_destination = self.data_outgoing[0][3]
-        return data[0]
+        
+        # extract current data to be sent
+        data, status = self.data_outgoing.pop(0)
+
+        # check if the last status request was answered with the same status
+        # as the data is supposed to be sent with
+        # we just compare the JSON strings
+        if json.dumps(status, sort_keys=True) != \
+            json.dumps(self.last_send_status, sort_keys=True):
+            raise Exception("Race condition error, the controller got sent a" +
+                "different GET/status object that the one intended with this data object."+
+                "Needed status object: {}, actual status object: {}".format(
+                json.dumps(status, sort_keys=True), 
+                json.dumps(self.last_send_status, sort_keys=True)))
+        
+        # status is fine, send data out
+        return data
 
     def _register_state(self, name, state, participant, coordinator, **kwargs):
         """ Instantiates a state, provides app-level information and adds it as part of the app workflow.
@@ -383,6 +434,7 @@ class App:
 
         self.transition_log.append((datetime.datetime.now(), name))
         self.current_state = transition[1]
+        self.default_status["state"] = self.current_state
 
     def log(self, msg, level: LogLevel = LogLevel.DEBUG):
         """
@@ -495,9 +547,13 @@ class AppState(abc.ABC):
         self._app.register_transition(f'{self.name}_{name}', self.name, target, participant, coordinator, label)
 
     def aggregate_data(self, operation: SMPCOperation = SMPCOperation.ADD, use_smpc=False,
-                       use_dp=False):
+                       use_dp=False, memo=None):
         """
-        Waits for all participants (including the coordinator instance) to send data and returns the aggregated value.
+        Waits for all participants (including the coordinator instance) 
+        to send data and returns the aggregated value. Will try to convert
+        each data piece to a np.array and aggregate those arrays.
+        Therefore, this method only works for numerical data and all datapieces
+        should be addable.
 
         Parameters
         ----------
@@ -508,37 +564,47 @@ class AppState(abc.ABC):
         use_dp: bool, default=False
             if True, clients sent their data adding dp via the use_dp option in the send functions
             this means the data is in json format
-
+        memo : str or None, default=None
+            the string identifying a specific communication round. 
+            Any app should ensure that this string is the same over all clients
+            over the same communication round and that a different string is 
+            used for each communication round. This ensures that no race 
+            condition problems occur
         Returns
         -------
         aggregated value
         """
 
         if use_smpc:
-            return self.await_data(1, unwrap=True, is_json=True)  # Data is aggregated already
-        elif use_dp:
-            data = self.gather_data(is_json=True)
-            return _aggregate(data, operation)
+            return self.await_data(n=1, unwrap=True, is_json=True, memo=memo)  
+              # Data is aggregated already
         else:
-            data = self.gather_data(is_json=False)
-            return _aggregate(data, operation)  # Data needs to be aggregated according to operation
+            data = self.gather_data(is_json=use_dp, memo=memo)
+            return _aggregate(data, operation)  
+              # Data needs to be aggregated according to operation
 
-    def gather_data(self, is_json=False, use_smpc=False, use_dp=False):
+    def gather_data(self, is_json=False, use_smpc=False, use_dp=False, memo=None):
         """
         Waits for all participants (including the coordinator instance) to send data and returns a list containing the received data pieces. Only valid for the coordinator instance.
 
         Parameters
         ----------
-        use_smpc: bool, default=False
-            Indicated whether the data that is gather was sent using SMPC.
-            If this is not set to True when data was sent using SMPC, this 
-            function ends up in an endless loop
-        use_dp: bool, default=False
         is_json : bool, default=False
             [deprecated] when data was sent via DP or SMPC, the data is sent in
             JSON serialization. This was used to indicate this but is now 
             DEPRICATED, use use_smpc/use_dp accordingly instead, they will take
             care of serialization automatically.
+        use_smpc: bool, default=False
+            Indicated whether the data that is gather was sent using SMPC.
+            If this is not set to True when data was sent using SMPC, this 
+            function ends up in an endless loop
+        use_dp: bool, default=False
+        memo : str or None, default=None
+            the string identifying a specific communication round. 
+            Any app should ensure that this string is the same over all clients
+            over the same communication round and that a different string is 
+            used for each communication round. This ensures that no race 
+            condition problems occur
         Returns
         -------
         list of n data pieces, where n is the number of participants
@@ -550,33 +616,66 @@ class AppState(abc.ABC):
             is_json = True
         if use_smpc:
             n = 1
-        return self.await_data(n, unwrap=False, is_json=is_json)
+        return self.await_data(n, unwrap=False, is_json=is_json, use_dp=use_dp,
+                               use_smpc=use_smpc, memo=memo)
 
-    def await_data(self, n: int = 1, unwrap=True, is_json=False):
+    def await_data(self, n: int = 1, unwrap=True, is_json=False, 
+                   use_dp=False, use_smpc=False, memo=None):
         """
         Waits for n data pieces and returns them.
 
         Parameters
         ----------
         n : int, default=1
-            number of data pieces to wait for
+            number of data pieces to wait for. Is ignored when use_smpc is used
+            as smpc data is aggregated by the controller, therefore only one
+            data piece is given when using smpc
         unwrap : bool, default=True
             if True, will return the first element of the collected data (only useful if n = 1)
         is_json : bool, default=False
-            if True, expects JSON serialized values and deserializes it accordingly
-            JSON serialization is used with SMPC and DP, so when SMPC or DP was used
-            in the corresponding send_data, is_json should be true.
-            Data sent via broadcast however is always serialized via pickle, so for
-            if the await_data expects data from broadcast, is_json=False should be used
-
+            [deprecated] when data was sent via DP or SMPC, the data is sent in
+            JSON serialization. This was used to indicate this to deserailize
+            the data correctly, but is now DEPRICATED, use use_smpc/use_dp
+            accordingly instead, they will take care of serialization
+            automatically. 
+        use_dp : bool, default=False
+            if True, will assume that data was sent and modified with the
+            controllers differential privacy capacities (with use_dp=true in the
+            corresponding send function. This will ensure serialization is done
+            correctly
+        use_smpc: bool, default=False
+            if True, will ensure that n is set to 1 and the correct 
+            serialization is used (SMPC uses JSON serialization)
+        memo : str or None, default=None
+            the string identifying a specific communication round. 
+            Any app should ensure that this string is the same over all clients
+            over the same communication round and that a different string is 
+            used for each communication round. This ensures that no race 
+            condition problems occur
         Returns
         -------
         list of data pieces (if n > 1 or unwrap = False) or a single data piece (if n = 1 and unwrap = True)
         """
+        if use_smpc:
+            n = 1
+            is_json = True
+        if use_dp:
+            is_json = True
+
         while True:
-            if len(self._app.data_incoming) >= n:
-                data = self._app.data_incoming[:n]
-                self._app.data_incoming = self._app.data_incoming[n:]
+            num_data_pieces = len(self._app.data_incoming[memo])
+            if num_data_pieces >= n:
+                # warn if too many data pieces came in
+                if num_data_pieces > n:
+                    self._app.log(
+                        f"await was used to wait for {n} data pieces, " + \ 
+                        f"but more data pieces ({num_data_pieces}) were found. " + \
+                        f"Used memo is <{memo}>",
+                        LogLevel.ERROR)
+                    
+                # extract and deseralize the data
+                data = self._app.data_incoming[memo][:n]
+                self._app.data_incoming[memo] = self._app.data_incoming[memo][n:]
                 if n == 1 and unwrap:
                     return _deserialize_incoming(data[0][0], is_json=is_json)
                 else:
@@ -584,7 +683,8 @@ class AppState(abc.ABC):
 
             sleep(DATA_POLL_INTERVAL)
 
-    def send_data_to_participant(self, data, destination, use_dp=False):
+    def send_data_to_participant(self, data, destination, use_dp=False, 
+                                 memo=None):
         """
         Sends data to a particular participant identified by its ID.
 
@@ -593,22 +693,31 @@ class AppState(abc.ABC):
         data : object
             data to be sent
         destination : str
-            destination client ID
+            destination client ID, get this from e.g. self.clients
+        memo : str or None, default=None
+            the string identifying a specific communication round. 
+            This ensures that there are no race condition problems and the 
+            correct data piece can be identified by the recipient of the 
+            data piece sent with this function call
+        memo
         """
 
         data = _serialize_outgoing(data, is_json=use_dp)
         if destination == self._app.id and not use_dp:
             # In no DP case, the data does not have to be sent via the controller
-            self._app.data_incoming.append((data, self._app.id))
+            self._app.handle_incoming(data, client=self._app.id, memo=memo)
         else:
-            self._app.data_outgoing.append((data, False, use_dp, destination))
-            self._app.status_destination = destination
-            self._app.status_smpc = None
-            self._app.status_dp = self._app.default_dp if use_dp else None
-            self._app.status_available = True
+            # construct a status object
+            status = deepcopy(self._app.default_status)
+            status["message"] = self._app.status_message if self.status_message else (self.current_state.name if self.current_state else None)
+            status["destination"] = destination
+            status["dp"] = self._app.default_dp if use_dp else None
+            status["memo"] = memo
+            status["available"] = True
+            self._app.data_outgoing.append((data, status))
 
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False,
-                                 use_dp=False):
+                                 use_dp=False, memo=None):
         """
         Sends data to the coordinator instance.
 
@@ -623,6 +732,13 @@ class AppState(abc.ABC):
         use_dp : bool, default=False
             if True, the data will be noised before sending according to the
             saved dp configuration
+        memo : str or None, default=None
+            the string identifying a specific communication round. 
+            This ensures that there are no race condition problems so that the 
+            coordinator uses the correct data piece from each client for each
+            communication round. This also ensures that workflows where 
+            participants send data to the coordinator without waiting for a 
+            response work
         """
         if use_smpc or use_dp:
             data = _serialize_outgoing(data, is_json=True)
@@ -635,21 +751,28 @@ class AppState(abc.ABC):
             # and neither dp nor smpc are used, the controller does not have to be used
             # for sending the data
             if send_to_self:
-                self._app.data_incoming.append((data, self._app.id))
+                self._app.handle_incoming(data, self._app.id, memo)
         else:
             # for SMPC and DP, the data has to be sent via the controller
-            self._app.data_outgoing.append((data, use_smpc, use_dp, None))
+            status = deepcopy(self._app.default_status)
+            
             if use_dp and self._app.coordinator:
                 # give the coordinator as destination,
                 # else, it will be interpreted as a broadcast action
                 self._app.status_destination = self._app.id
             else:
-                self._app.status_destination = None
-            self._app.status_smpc = self._app.default_smpc if use_smpc else None
-            self._app.status_dp = self._app.default_dp if use_dp else None
-            self._app.status_available = True
+                status["destination"] = None 
+                  # this is interpreted as to the coordinator
 
-    def broadcast_data(self, data, send_to_self=True, use_dp = False):
+            status["message"] = self._app.status_message if self.status_message else (self.current_state.name if self.current_state else None)
+            status["dp"] = self._app.default_dp if use_dp else None
+            status["smpc"] = self._app.default_smpc if use_smpc else None
+            status["memo"] = memo
+            status["available"] = True
+            self._app.data_outgoing.append((data, status))
+
+    def broadcast_data(self, data, send_to_self=True, use_dp = False, 
+                       memo = None):
         """
         Broadcasts data to all participants (only valid for the coordinator instance).
 
@@ -659,30 +782,35 @@ class AppState(abc.ABC):
             data to be sent
         send_to_self : bool
             if True, the data will also be sent internally to this coordinator instance
-        use_dp : bool
-            if True, data will be noised with DP before being broadcasted
+        use_dp : bool, default=False
+            This will use differential privacy on the broadcast data, meaning 
+            that data is sent with the serialization given for DP, which by
+            default is JSON
+        memo : str or None, default=None
+            the string identifying a specific communication round. 
+            This ensures that there are no race condition problems so that the 
+            participants and the coordinator can differentiate between this
+            data piece broadcast and other data pieces they receive from the
+            coordinator.
         """
         if not self._app.coordinator:
             self._app.log('only the coordinator can broadcast data', level=LogLevel.FATAL)
 
+        is_json = False
         if use_dp:
-            self.send_data_to_participant(data,
-                                          destination=self.id,
-                                          use_dp=True)
-            data = self.await_data(n = 1,
-                                   unwrap=True,
-                                   is_json=True)
+            is_json = True
 
         # serialize before broadcast
         data = _serialize_outgoing(data, is_json=False)
 
-        self._app.data_outgoing.append((data, False, False, None))
-        self._app.status_destination = None
-        self._app.status_smpc = None
-        self._app.status_dp = None
-        self._app.status_available = True
+        status = deepcopy(self._app.default_status)
+        status["destination"] = None
+        status["dp"] = self._app.default_dp if use_dp else None
+        status["memo"] = memo
+        status["available"] = True
         if send_to_self:
-            self._app.data_incoming.append((data, self._app.id))
+            self._app.handle_incoming(data, client=self._app.id, memo=memo)
+        self._app.data_outgoing.append((data, status))
 
     def configure_smpc(self, exponent: int = 8, shards: int = 0, operation: SMPCOperation = SMPCOperation.ADD,
                        serialization: SMPCSerialization = SMPCSerialization.JSON):
@@ -801,9 +929,10 @@ class AppState(abc.ABC):
             self._app.log('progress must be between 0 and 1', level=LogLevel.FATAL)
         if state is not None and state != State.RUNNING and state != State.ERROR and state != State.ACTION:
             self._app.log('invalid state', level=LogLevel.FATAL)
-        self._app.status_message = message
-        self._app.status_progress = progress
-        self._app.status_state = state.value if state else None
+
+        self._app.default_status["message"] = message
+        self._app.default_status["progress"] = progress
+        self._app.default_status["state"] = state.value if state else None
 
     def store(self, key: str, value):
         """ Store allows to share data across different AppState instances.
