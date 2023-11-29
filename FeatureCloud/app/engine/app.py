@@ -9,7 +9,6 @@ import pickle
 import sys
 import threading
 import traceback
-from copy import deepcopy
 
 from enum import Enum
 from time import sleep
@@ -129,7 +128,7 @@ class App:
     transition_log: List[Tuple[datetime.datetime, str]]
     internal: dict
 
-    current_state: str
+    current_state: AppState
 
 
     Methods
@@ -162,7 +161,7 @@ class App:
             # comunication round the data belongs to
         self.data_outgoing = [] 
             # list of all data objects and the corresponding status to use with them
-            # format: list of tuples, each tuple contains dataObject, statusObject
+            # format: list of tuples, each tuple contains dataObject, status as JSON string
 
         self.default_smpc: SMPCType = {'operation': 'add', 'serialization': 'json', 'shards': 0, 'exponent': 8}
         self.default_dp: DPType = {'serialization': 'json', 'noisetype': 'laplace',
@@ -180,23 +179,17 @@ class App:
 
         self.internal = {}
 
-        # the default status should just contain the uptodate message, progress
-        # etc, but always have available set to False
-        # this object should be deepcopied when setting the status for outgoing 
-        # data
-        self.default_status = {
-            'available': False,
-            'finished': False,
-            'message': None,
-            'progress': None,
-            'state': None,
-            'destination': None,
-            'smpc': None,
-            'dp': None,
-            'memo': None
-        }
+        self.status_available: bool = False
+        self.status_finished: bool = False
+        self.status_message: Union[str, None] = None
+        self.status_progress: Union[float, None] = None
+        self.status_state: Union[str, None] = None
+        self.status_destination: Union[str, None] = None
+        self.status_smpc: Union[SMPCType, None] = None
+        self.status_dp: Union[DPType, None] = None
+        self.status_memo: Union[str, None] = None
 
-        self.last_send_status = deepcopy(self.default_status)
+        self.last_send_status = self.get_current_status()
         
         # Add terminal state
         @app_state('terminal', Role.BOTH, self)
@@ -232,7 +225,6 @@ class App:
         if not self.current_state:
             self.log('initial state not found', level=LogLevel.FATAL)
 
-        self.default_status["state"] = self.current_state
         self.thread = threading.Thread(target=self.guarded_run)
         self.thread.start()
 
@@ -244,11 +236,12 @@ class App:
             self.run()
         except Exception as e:  # catch all  # noqa
             self.log(traceback.format_exc())
-            status = deepcopy(self.default_status)
-            status["message"] = e.__class__.__name__
-            status["state"] = State.ERROR.value
-            status["finished"] = True
-            self.data_outgoing = [(None, status)]
+            self.status_message = e.__class__.__name__
+            self.status_state = State.ERROR.value
+            self.status_finished = True
+            self.data_outgoing.insert(0, (None, self.get_current_status(
+                finished=True, state=State.ERROR.value, 
+                message=e.__class__.__name__)))
               # remove ANY data in the pipeline and crash the workflow 
               # on the next poll
 
@@ -264,13 +257,18 @@ class App:
             self.log(f'transition: {transition}')
             self.transition(f'{self.current_state.name}_{transition}')
             if self.current_state.name == 'terminal':
-                # replace any outgoing data with no data and a finished status
-                self.default_status["progress"] = 1.0
-                self.log('done')
-                self.data_outgoing = [(None, deepcopy(self.default_status))] 
+                # first wait for e.g. the last broadcast to be sent out
                 sleep(TERMINAL_WAIT)
-                self.default_status["finished"] = True
-                self.data_outgoing = [(None, deepcopy(self.default_status))] 
+                self.status_message = "terminal"
+                self.status_progress = 1.0
+                self.log('done')
+                status = self.get_current_status(progress=1.0, message="terminal")
+                self.status_finished = True
+                status["finished"] = True
+                self.data_outgoing = [(None, status)] 
+                # second wait so that the controller can pickup that the 
+                # app finnished completely
+                sleep(TERMINAL_WAIT)
                 return
             sleep(TRANSITION_WAIT)
 
@@ -283,6 +281,22 @@ class App:
             state = self.states[s]
             state.register()
 
+    def get_current_status(self, **kwargs):
+        status = dict()
+        status["available"] = self.status_available
+        status["finished"] = self.status_finished
+        status["message"] = self.status_message
+        status["progress"] = self.status_progress
+        status["state"] = self.status_state
+        status["destination"] = self.status_destination
+        status["smpc"] = self.status_smpc
+        status["dp"] = self.status_dp
+        status["memo"] = self.status_memo
+        for key, value in kwargs.items():
+            # set whatever is wanted from the arguments
+            status[key] = value
+        return status
+    
     def handle_incoming(self, data, client, memo):
         """ When new data arrives, it appends it to the
             `data_incoming` attribute to be accessible for app states.
@@ -304,11 +318,11 @@ class App:
         """ This informs if there is any data to be sent as well as the way
             data should be send
         """
-        self.default_status["message"] = self.status_message if self.status_message else (self.current_state.name if self.current_state else None)
+        self.status_message = self.status_message if self.status_message else (self.current_state.name if self.current_state else None)
         # ensure that some message is set 
         if len(self.data_outgoing) == 0:
             # no data to send, just return the default status with available=false
-            return json.dumps(self.default_status)
+            return self.get_current_status(available=False)
         
         # else take the status from the data to be sent out next. The whole 
         # data, status combination gets popped in the next handle_outgoing 
@@ -316,8 +330,8 @@ class App:
         # the status and data itself must still be kept in the list
 
         _, status = self.data_outgoing[0]
-        self.last_send_status = deepcopy(status)
-        return json.dumps(status)
+        self.last_send_status = status
+        return status
         
     def handle_outgoing(self):
         """ When it is requested to send some data to other client/s
@@ -336,8 +350,7 @@ class App:
         # check if the last status request was answered with the same status
         # as the data is supposed to be sent with
         # we just compare the JSON strings
-        if json.dumps(status, sort_keys=True) != \
-            json.dumps(self.last_send_status, sort_keys=True):
+        if status != self.last_send_status:
             raise Exception("Race condition error, the controller got sent a" +
                 "different GET/status object that the one intended with this data object."+
                 "Needed status object: {}, actual status object: {}".format(
@@ -434,7 +447,7 @@ class App:
 
         self.transition_log.append((datetime.datetime.now(), name))
         self.current_state = transition[1]
-        self.default_status["state"] = self.current_state
+        self.status_message = self.current_state.name
 
     def log(self, msg, level: LogLevel = LogLevel.DEBUG):
         """
@@ -663,19 +676,25 @@ class AppState(abc.ABC):
             is_json = True
 
         while True:
-            num_data_pieces = len(self._app.data_incoming[memo])
+            # print(f"Current Incoming Data: {self._app.data_incoming}")
+            num_data_pieces = 0
+            if memo in self._app.data_incoming:
+                num_data_pieces = len(self._app.data_incoming[memo])
             if num_data_pieces >= n:
                 # warn if too many data pieces came in
                 if num_data_pieces > n:
                     self._app.log(
-                        f"await was used to wait for {n} data pieces, " + \ 
-                        f"but more data pieces ({num_data_pieces}) were found. " + \
+                        f"await was used to wait for {n} data pieces, " + 
+                        f"but more data pieces ({num_data_pieces}) were found. " +
                         f"Used memo is <{memo}>",
                         LogLevel.ERROR)
                     
                 # extract and deseralize the data
                 data = self._app.data_incoming[memo][:n]
                 self._app.data_incoming[memo] = self._app.data_incoming[memo][n:]
+                if len(self._app.data_incoming[memo]) == 0:
+                    # clean up the dict regularly
+                    del self._app.data_incoming[memo]
                 if n == 1 and unwrap:
                     return _deserialize_incoming(data[0][0], is_json=is_json)
                 else:
@@ -707,14 +726,14 @@ class AppState(abc.ABC):
             # In no DP case, the data does not have to be sent via the controller
             self._app.handle_incoming(data, client=self._app.id, memo=memo)
         else:
-            # construct a status object
-            status = deepcopy(self._app.default_status)
-            status["message"] = self._app.status_message if self.status_message else (self.current_state.name if self.current_state else None)
-            status["destination"] = destination
-            status["dp"] = self._app.default_dp if use_dp else None
-            status["memo"] = memo
-            status["available"] = True
-            self._app.data_outgoing.append((data, status))
+            # update the status variables and get the status object
+            message = self._app.status_message if self._app.status_message else (self._app.current_state.name if self._app.current_state else None)
+            dp = self._app.default_dp if use_dp else None
+            self._app.status_message = message
+            status = self._app.get_current_status(message=message, 
+                        destination=destination, dp=dp, memo=memo,
+                        available=True)
+            self._app.data_outgoing.append((data, json.dumps(status, sort_keys=True)))
 
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False,
                                  use_dp=False, memo=None):
@@ -753,23 +772,22 @@ class AppState(abc.ABC):
             if send_to_self:
                 self._app.handle_incoming(data, self._app.id, memo)
         else:
-            # for SMPC and DP, the data has to be sent via the controller
-            status = deepcopy(self._app.default_status)
-            
+            # for SMPC and DP, the data has to be sent via the controller        
             if use_dp and self._app.coordinator:
                 # give the coordinator as destination,
                 # else, it will be interpreted as a broadcast action
-                self._app.status_destination = self._app.id
+                destination = self._app.id
             else:
-                status["destination"] = None 
-                  # this is interpreted as to the coordinator
-
-            status["message"] = self._app.status_message if self.status_message else (self.current_state.name if self.current_state else None)
-            status["dp"] = self._app.default_dp if use_dp else None
-            status["smpc"] = self._app.default_smpc if use_smpc else None
-            status["memo"] = memo
-            status["available"] = True
-            self._app.data_outgoing.append((data, status))
+                destination = None 
+                # this is interpreted as to the coordinator
+            message = self._app.status_message if self._app.status_message else (self._app.current_state.name if self._app.current_state else None)
+            self._app.status_message = message
+            smpc = self._app.default_smpc if use_smpc else None
+            dp = self._app.default_dp if use_dp else None
+            status = self._app.get_current_status(message=message, 
+                        destination=destination, smpc=smpc, dp=dp, memo=memo,
+                        available=True)
+            self._app.data_outgoing.append((data, json.dumps(status, sort_keys=True)))
 
     def broadcast_data(self, data, send_to_self=True, use_dp = False, 
                        memo = None):
@@ -803,14 +821,15 @@ class AppState(abc.ABC):
         # serialize before broadcast
         data = _serialize_outgoing(data, is_json=False)
 
-        status = deepcopy(self._app.default_status)
-        status["destination"] = None
-        status["dp"] = self._app.default_dp if use_dp else None
-        status["memo"] = memo
-        status["available"] = True
+        message = self._app.status_message if self._app.status_message else (self._app.current_state.name if self._app.current_state else None)
+        self._app.status_message = message
+        dp = self._app.default_dp if use_dp else None
+        status = self._app.get_current_status(message=message, 
+                        destination=None, dp=dp, memo=memo,
+                        available=True)
         if send_to_self:
             self._app.handle_incoming(data, client=self._app.id, memo=memo)
-        self._app.data_outgoing.append((data, status))
+        self._app.data_outgoing.append((data, json.dumps(status, sort_keys=True)))
 
     def configure_smpc(self, exponent: int = 8, shards: int = 0, operation: SMPCOperation = SMPCOperation.ADD,
                        serialization: SMPCSerialization = SMPCSerialization.JSON):
@@ -930,9 +949,9 @@ class AppState(abc.ABC):
         if state is not None and state != State.RUNNING and state != State.ERROR and state != State.ACTION:
             self._app.log('invalid state', level=LogLevel.FATAL)
 
-        self._app.default_status["message"] = message
-        self._app.default_status["progress"] = progress
-        self._app.default_status["state"] = state.value if state else None
+        self._app.status_message = message
+        self._app.status_progress = progress
+        self._app.status_state = state.value if state else None
 
     def store(self, key: str, value):
         """ Store allows to share data across different AppState instances.
@@ -1073,6 +1092,5 @@ def _aggregate(data, operation: SMPCOperation):
             aggregate = aggregate * d
 
     return aggregate
-
 
 app = App()
