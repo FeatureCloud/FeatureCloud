@@ -115,6 +115,7 @@ class App:
     status_state: str
     status_destination: str
     status_smpc: dict
+    status_memo: bool
 
     default_smpc: dict
     default_dp: dict
@@ -257,19 +258,25 @@ class App:
             self.log(f'transition: {transition}')
             self.transition(f'{self.current_state.name}_{transition}')
             if self.current_state.name == 'terminal':
-                # first wait for e.g. the last broadcast to be sent out
-                sleep(TERMINAL_WAIT)
-                self.status_message = "terminal"
-                self.status_progress = 1.0
-                self.log('done')
-                status = self.get_current_status(progress=1.0, message="terminal")
-                self.status_finished = True
-                status["finished"] = True
-                self.data_outgoing = [(None, status)] 
-                # second wait so that the controller can pickup that the 
-                # app finnished completely
-                sleep(TERMINAL_WAIT)
-                return
+                terminal_status_added = False
+                while True:
+                    if not terminal_status_added:
+                        # add finished status answer to the outgoing data queue
+                        status = self.get_current_status(progress=1.0, 
+                                                         message="terminal", 
+                                                         finished=True)
+                        self.data_outgoing.append((None, status)) 
+                            # only append to ensure that all data in the pipe is still
+                            # sent out
+                        sleep(TERMINAL_WAIT) 
+                            # potentially this wait time clears the queue already
+                    if len(self.data_outgoing) > 1:
+                        # there is still data to be sent out
+                        f'done, waiting for the last {len(self.data_outgoing)-1} data pieces to be send')
+                        sleep(TERMINAL_WAIT) 
+                    elif len(self.data_outgoing) == 0:
+                        self.log('done')
+                        return 
             sleep(TRANSITION_WAIT)
 
     def register(self):
