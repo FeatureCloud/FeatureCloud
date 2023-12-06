@@ -160,7 +160,7 @@ App template based development (recommended)
       # Here you can for example load the config file and the data
       # Any data given by the user will always be placed in the directory
       # given in the line below (<workind_dir>/mnt/input)
-      dataFile = os.path.join(os.getcwd(), "mnt", "input", "data.csv"))
+      dataFile = os.path.join(os.getcwd(), "mnt", "input", "data.csv")
       data = pd.read_csv(dataFile)
       # Data can be stored for access in other states like this
       self.store(key = "data", value=data)
