@@ -107,21 +107,23 @@ class App:
     id: str
     coordinator: bool
     clients: list
-
-    status_available: bool
+    send_counter: int
+    receive_counter: int
+    status_available: bool 
     status_finished: bool
     status_message: str
     status_progress: float
     status_state: str
     status_destination: str
-    status_smpc: dict
-    status_memo: bool
+    status_smpc: SMPCType
+    status_dp: DPType
+    status_memo: str
 
     default_smpc: dict
     default_dp: dict
 
-    data_incoming: dict
-    data_outgoing: list
+    data_incoming: dict[str]: [(data, sendingClientID: str),...]
+    data_outgoing: list[(data, statusJSON: str)]
     thread: threading.Thread
 
     states: Dict[str, AppState]
@@ -130,13 +132,14 @@ class App:
     internal: dict
 
     current_state: AppState
-
+    last_send_status: str (JSON)
 
     Methods
     -------
     handle_setup(client_id, coordinator, clients)
     handle_incoming(data)
     handle_outgoing()
+    get_current_status(**kwargs)
     guarded_run()
     run()
     register()
@@ -152,7 +155,15 @@ class App:
         self.clients = None
         self.default_memo = None
         self.thread: Union[threading.Thread, None] = None
-
+        self.send_counter: int = 0 
+        self.receive_counter: int = 0
+            # the send counter is increased with any send_data_to_coordinator
+            # call while the receive counter is increased with any
+            # aggregate_data and gather_data call as well as with
+            # await_data with n=#clients OR n=#clients-1 OR n=1 and smpc=True
+            # This should work in 99% of all cases, except when
+            # somebody uses send_data_to_participant from each client and then
+            # uses await_data on all these #clients -1 data pieces.
         self.data_incoming = {}
             # dictionary mapping memo: [(data, client),...]
             # data is the data serialized with JSON when SMPC or DP is used, 
@@ -250,14 +261,14 @@ class App:
         """    Runs the workflow, logs the current state, executes it,
                and handles the transition to the next desired state.
                Once the app transits to the terminal state, the workflow will be terminated.
-
-       """
+        """
         while True:
             self.log(f'state: {self.current_state.name}')
             transition = self.current_state.run()
             self.log(f'transition: {transition}')
             self.transition(f'{self.current_state.name}_{transition}')
             if self.current_state.name == 'terminal':
+                sleep(TERMINAL_WAIT) 
                 terminal_status_added = False
                 while True:
                     if not terminal_status_added:
@@ -268,15 +279,22 @@ class App:
                         self.data_outgoing.append((None, status)) 
                             # only append to ensure that all data in the pipe is still
                             # sent out
+                        terminal_status_added = True
                         sleep(TERMINAL_WAIT) 
                             # potentially this wait time clears the queue already
                     if len(self.data_outgoing) > 1:
                         # there is still data to be sent out
-                        f'done, waiting for the last {len(self.data_outgoing)-1} data pieces to be send')
+                        self.log(f'done, waiting for the last {len(self.data_outgoing)-1} data pieces to be send')
+                    elif len(self.data_outgoing) == 1:
                         sleep(TERMINAL_WAIT) 
-                    elif len(self.data_outgoing) == 0:
+                            # the last status that was added before is never
+                            # removed, so we finnish when only one status is 
+                            # left
+                            # To ensure that this last status has been pulled,
+                            # we just wait 
                         self.log('done')
                         return 
+                    sleep(TRANSITION_WAIT)
             sleep(TRANSITION_WAIT)
 
     def register(self):
@@ -361,9 +379,8 @@ class App:
             raise Exception("Race condition error, the controller got sent a" +
                 "different GET/status object that the one intended with this data object."+
                 "Needed status object: {}, actual status object: {}".format(
-                json.dumps(status, sort_keys=True), 
-                json.dumps(self.last_send_status, sort_keys=True)))
-        
+                status, self.last_send_status))
+
         # status is fine, send data out
         return data
 
@@ -582,8 +599,10 @@ class AppState(abc.ABC):
         use_smpc : bool, default=False
             if True, the data to be aggregated is expected to stem from an SMPC aggregation
         use_dp: bool, default=False
-            if True, clients sent their data adding dp via the use_dp option in the send functions
-            this means the data is in json format
+            if True, will assume that data was sent and modified with the
+            controllers differential privacy capacities (with use_dp=true in the
+            corresponding send function). This must be set in the receiving 
+            function due to serialization differences with DP
         memo : str or None, default=None
             the string identifying a specific communication round. 
             Any app should ensure that this string is the same over all clients
@@ -594,7 +613,9 @@ class AppState(abc.ABC):
         -------
         aggregated value
         """
-
+        if not memo:
+            self._app.receive_counter += 1
+            memo = f"GATHERROUND{self._app.receive_counter}"
         if use_smpc:
             return self.await_data(n=1, unwrap=True, is_json=True, memo=memo)  
               # Data is aggregated already
@@ -619,6 +640,10 @@ class AppState(abc.ABC):
             If this is not set to True when data was sent using SMPC, this 
             function ends up in an endless loop
         use_dp: bool, default=False
+            if True, will assume that data was sent and modified with the
+            controllers differential privacy capacities (with use_dp=true in the
+            corresponding send function). This must be set in the receiving 
+            function due to serialization differences with DP
         memo : str or None, default=None
             the string identifying a specific communication round. 
             Any app should ensure that this string is the same over all clients
@@ -636,6 +661,9 @@ class AppState(abc.ABC):
             is_json = True
         if use_smpc:
             n = 1
+        if not memo:
+            self._app.receive_counter += 1
+            memo = f"GATHERROUND{self._app.receive_counter}"
         return self.await_data(n, unwrap=False, is_json=is_json, use_dp=use_dp,
                                use_smpc=use_smpc, memo=memo)
 
@@ -661,17 +689,18 @@ class AppState(abc.ABC):
         use_dp : bool, default=False
             if True, will assume that data was sent and modified with the
             controllers differential privacy capacities (with use_dp=true in the
-            corresponding send function. This will ensure serialization is done
-            correctly
+            corresponding send function). This must be set in the receiving 
+            function due to serialization differences with DP
         use_smpc: bool, default=False
             if True, will ensure that n is set to 1 and the correct 
             serialization is used (SMPC uses JSON serialization)
         memo : str or None, default=None
+            RECOMMENDED TO BE SET FOR THIS METHOD!
             the string identifying a specific communication round. 
             Any app should ensure that this string is the same over all clients
             over the same communication round and that a different string is 
             used for each communication round. This ensures that no race 
-            condition problems occur
+            condition problems occur.
         Returns
         -------
         list of data pieces (if n > 1 or unwrap = False) or a single data piece (if n = 1 and unwrap = True)
@@ -681,9 +710,27 @@ class AppState(abc.ABC):
             is_json = True
         if use_dp:
             is_json = True
+        if not memo and self._app.coordinator:
+            # only increment for the coordinator to really avoid any p2p 
+            # problems
+            if (n == len(self._app.clients) and use_smpc==False) \
+                or (n == len(self._app.clients) - 1 and use_smpc==False) \
+                or use_smpc == True:
+                # this is a gather/aggregate call, although in theory
+                # (n==1 and is_json=True) could also be an SMPC gather call,
+                # but it cannot be differentiate between that being an SMPC
+                # gather call or an p2p with DP call
+                self._app.receive_counter += 1
+                memo = f"GATHERROUND{self._app.receive_counter}"
+
+        try:
+            memo = str(memo)
+        except Exception as e:
+            self._app.log(
+                f"given memo cannot be translated to a string, ERROR: {e}", 
+                LogLevel.Error)
 
         while True:
-            # print(f"Current Incoming Data: {self._app.data_incoming}")
             num_data_pieces = 0
             if memo in self._app.data_incoming:
                 num_data_pieces = len(self._app.data_incoming[memo])
@@ -702,6 +749,7 @@ class AppState(abc.ABC):
                 if len(self._app.data_incoming[memo]) == 0:
                     # clean up the dict regularly
                     del self._app.data_incoming[memo]
+
                 if n == 1 and unwrap:
                     return _deserialize_incoming(data[0][0], is_json=is_json)
                 else:
@@ -720,14 +768,26 @@ class AppState(abc.ABC):
             data to be sent
         destination : str
             destination client ID, get this from e.g. self.clients
+        use_dp : bool, default=False
+            Whether to use differential privacy(dp) before sending out the data.
+            To configure the hypterparameters of dp, use the configure_dp method
+            before this method. The receiving method must also use the same 
+            setting of the use_dp flag or there will be serialization problems
         memo : str or None, default=None
+            RECOMMENDED TO BE SET FOR THIS METHOD!
             the string identifying a specific communication round. 
             This ensures that there are no race condition problems and the 
             correct data piece can be identified by the recipient of the 
             data piece sent with this function call
-        memo
-        """
 
+        """
+        try:
+            memo = str(memo)
+        except Exception as e:
+            self._app.log(
+                f"given memo cannot be translated to a string, ERROR: {e}", 
+                LogLevel.Error)
+            
         data = _serialize_outgoing(data, is_json=use_dp)
         if destination == self._app.id and not use_dp:
             # In no DP case, the data does not have to be sent via the controller
@@ -756,8 +816,10 @@ class AppState(abc.ABC):
         use_smpc : bool, default=False
             if True, the data will be sent as part of an SMPC aggregation step
         use_dp : bool, default=False
-            if True, the data will be noised before sending according to the
-            saved dp configuration
+            Whether to use differential privacy(dp) before sending out the data.
+            To configure the hypterparameters of dp, use the configure_dp method
+            before this method. The receiving method must also use the same 
+            setting of the use_dp flag or there will be serialization problems
         memo : str or None, default=None
             the string identifying a specific communication round. 
             This ensures that there are no race condition problems so that the 
@@ -766,6 +828,18 @@ class AppState(abc.ABC):
             participants send data to the coordinator without waiting for a 
             response work
         """
+        # if no memo is given (default), we use the counter from App
+        if not memo:
+            self._app.send_counter += 1
+            memo = f"GATHERROUND{self._app.send_counter}"
+        # ensure memo can be sent as a string
+        try:
+            memo = str(memo)
+        except Exception as e:
+            self._app.log(
+                f"given memo cannot be translated to a string, ERROR: {e}", 
+                LogLevel.Error)
+            
         if use_smpc or use_dp:
             data = _serialize_outgoing(data, is_json=True)
 
@@ -808,9 +882,10 @@ class AppState(abc.ABC):
         send_to_self : bool
             if True, the data will also be sent internally to this coordinator instance
         use_dp : bool, default=False
-            This will use differential privacy on the broadcast data, meaning 
-            that data is sent with the serialization given for DP, which by
-            default is JSON
+            Whether to use differential privacy(dp) before sending out the data.
+            To configure the hypterparameters of dp, use the configure_dp method
+            before this method. The receiving method must also use the same 
+            setting of the use_dp flag or there will be serialization problems
         memo : str or None, default=None
             the string identifying a specific communication round. 
             This ensures that there are no race condition problems so that the 
@@ -818,6 +893,13 @@ class AppState(abc.ABC):
             data piece broadcast and other data pieces they receive from the
             coordinator.
         """
+        try:
+            memo = str(memo)
+        except Exception as e:
+            self._app.log(
+                f"given memo cannot be translated to a string, ERROR: {e}", 
+                LogLevel.Error)
+            
         if not self._app.coordinator:
             self._app.log('only the coordinator can broadcast data', level=LogLevel.FATAL)
 
@@ -826,7 +908,7 @@ class AppState(abc.ABC):
             is_json = True
 
         # serialize before broadcast
-        data = _serialize_outgoing(data, is_json=False)
+        data = _serialize_outgoing(data, is_json=use_dp)
 
         message = self._app.status_message if self._app.status_message else (self._app.current_state.name if self._app.current_state else None)
         self._app.status_message = message
