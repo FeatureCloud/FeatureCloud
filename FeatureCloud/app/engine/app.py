@@ -152,6 +152,7 @@ class App:
     def __init__(self):
         self.id = None
         self.coordinator = None
+        self.coordinatorID = None
         self.clients = None
         self.default_memo = None
         self.thread: Union[threading.Thread, None] = None
@@ -212,7 +213,7 @@ class App:
             def run(self) -> Union[str, None]:
                 pass
 
-    def handle_setup(self, client_id, coordinator, clients):
+    def handle_setup(self, client_id, coordinator, clients, coordinatorID):
         """ It will be called on startup and contains information about the
             execution context of this instance. And registers all of the states.
 
@@ -222,10 +223,12 @@ class App:
         client_id: str
         coordinator: bool
         clients: list
+        coordinatorID: str
 
         """
         self.id = client_id
         self.coordinator = coordinator
+        self.coordinatorID = coordinatorID
         self.clients = clients
 
         self.log(f'id: {self.id}')
@@ -559,6 +562,13 @@ class AppState(abc.ABC):
         
         """
         return self._app.id
+    
+    @property
+    def coordintor_id(self):
+        """ Contains the id of the coordinator
+        
+        """
+        return self._app.coordinatorID
 
     def register_transition(self, target: str, role: Role = Role.BOTH, name: Union[str, None] = None, label: Union[str, None] = None):
         """
@@ -759,7 +769,10 @@ class AppState(abc.ABC):
     def send_data_to_participant(self, data, destination, use_dp=False, 
                                  memo=None):
         """
-        Sends data to a particular participant identified by its ID.
+        Sends data to a particular participant identified by its ID. Should be
+        used for any specific communication to individual clients. 
+        For the communication schema of all clients/all clients except the 
+        coordinator sending data to the coordinator, use send_data_to_coordinator
 
         Parameters
         ----------
@@ -805,7 +818,12 @@ class AppState(abc.ABC):
     def send_data_to_coordinator(self, data, send_to_self=True, use_smpc=False,
                                  use_dp=False, memo=None):
         """
-        Sends data to the coordinator instance.
+        Sends data to the coordinator instance. Must be used by all clients
+        or all clients except for the coordinator itself when no memo is given,
+        as the automated memo used when using memo=None breaks otherwise.
+        If any subset of clients should communicate with the coordinator,
+        either define the memo or use 
+        send_data_to_participant(destination=self.coordintor_id) with a memo.
 
         Parameters
         ----------

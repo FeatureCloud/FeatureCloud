@@ -18,7 +18,7 @@ def ctrl_setup():
     time.sleep(1)
     print(f'[CTRL] POST /setup')
     payload = request.json
-    app.handle_setup(payload.get('id'), payload.get('coordinator'), payload.get('clients'))
+    app.handle_setup(payload.get('id'), payload.get('coordinator'), payload.get('clients'), payload.get('coordinatorID'))
     return ''
 
 
