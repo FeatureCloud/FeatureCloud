@@ -209,7 +209,7 @@ class App:
             def register(self):
                 pass
 
-            def run(self) -> str:
+            def run(self) -> Union[str, None]:
                 pass
 
     def handle_setup(self, client_id, coordinator, clients):
@@ -508,8 +508,6 @@ class AppState(abc.ABC):
     ----------
     app: App
     name: str
-    participant: bool
-    coordinator: bool
 
     Properties
     ----------
@@ -521,8 +519,6 @@ class AppState(abc.ABC):
     def __init__(self):
         self._app = None
         self.name = None
-        self.participant = None
-        self.coordinator = None
 
     @abc.abstractmethod
     def register(self):
@@ -670,7 +666,8 @@ class AppState(abc.ABC):
     def await_data(self, n: int = 1, unwrap=True, is_json=False, 
                    use_dp=False, use_smpc=False, memo=None):
         """
-        Waits for n data pieces and returns them.
+        Waits for n data pieces and returns them. It is highly recommended to 
+        use the memo variable when using this method
 
         Parameters
         ----------
@@ -696,7 +693,9 @@ class AppState(abc.ABC):
             serialization is used (SMPC uses JSON serialization)
         memo : str or None, default=None
             RECOMMENDED TO BE SET FOR THIS METHOD!
-            the string identifying a specific communication round. 
+            the string identifying a specific communication round. The same
+            string that is used in this call must be used before in the 
+            corresponding sending functions.
             Any app should ensure that this string is the same over all clients
             over the same communication round and that a different string is 
             used for each communication round. This ensures that no race 
@@ -778,7 +777,8 @@ class AppState(abc.ABC):
             the string identifying a specific communication round. 
             This ensures that there are no race condition problems and the 
             correct data piece can be identified by the recipient of the 
-            data piece sent with this function call
+            data piece sent with this function call. The recipient of this data
+            must use the same memo to identify the data.
 
         """
         try:

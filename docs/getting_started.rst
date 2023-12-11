@@ -55,8 +55,8 @@ App template based development (recommended)
 
 ``featurecloud app new --template-name=app-blank my-app``
 
-1. Implement your own application using the template
-    * *Implementation of the app logic:* The implementation itself happens in `states.py`. 
+2. Implement your own application using the template
+    * *Implementation of the app logic:* The implementation itself happens in `states.py`. We suggest first looking at :ref:`this example <example states>` and then reading the concrete steps
       
       * You may use (and we recommended using) *states*.  Any state must have the 
         ``@app_state('[statename]')`` decorator. This decorator must decorate a
@@ -65,6 +65,10 @@ App template based development (recommended)
 
         * :py:meth:`register(self) <FeatureCloud.app.engine.app.AppState.register>`  must contain at least one call to 
           :py:meth:`self.register_transition('[anotherState]', [Role.COORDINATOR, Role.CLIENT, Role.BOTH]) <FeatureCloud.app.engine.app.AppState.register_transition>`
+        
+        * To get input data from the user of your app, specify the formatting of your input in your apps description and load any data from 
+          `/mnt/input`, e.g. via `conf = bios.read(/mnt/input/config.yml)` to load the config, then using the config to describe the data loaded, e.g.
+          `pandas.read_csv(f'mnt/input/{conf['[yourAppName]']['dataFileName']}')`. Furthermore, considering output, use `mnt/output`
 
         * :py:meth:`run(self) <FeatureCloud.app.engine.app.AppState.run>` implements all logic in the state. 
           Use ``return '[anotherState]'`` to change to the next state.
@@ -91,7 +95,7 @@ App template based development (recommended)
     and an app template, e.g checkout :ref:`template app dice <app dice>`.
     Alternatively, you can also check the :ref:`example provided here <example states>`
 
-2. Build your application (creates a docker image of the application)
+3. Build your application (creates a docker image of the application)
 
 ``featurecloud app build ./my-app my-app``
 
