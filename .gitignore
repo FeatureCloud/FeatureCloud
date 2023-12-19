@@ -19,6 +19,7 @@ FeatureCloud/venv
 **/.DS_Store
 build
 dist
+docs/_build
 
 .idea
 *.pyc
