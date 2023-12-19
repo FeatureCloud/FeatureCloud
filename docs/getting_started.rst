@@ -260,6 +260,12 @@ Additional features of FeatureCloud
    * :ref:`Secure MultiParty Computation (SMPC) <smpc anchor>`
 
    * :ref:`Differential Privacy (DP) <dp anchor>`
+  
+2. GPU Computation:
+   For this, simply checkout this `blog post <https://medium.com/developing-federated-applications-in-featurecloud/run-featurecloud-applications-with-gpu-acceleration-39cfec98f952/>`_.
+
+3. Testing of Workflows:
+   Whole workflows can be tested and run via Featurecloud, you can :ref:`find more information here <workflow anchor>`.
 
 Links to blog articles
 ----------------------
