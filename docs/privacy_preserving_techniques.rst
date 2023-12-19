@@ -50,7 +50,7 @@ for configuration. The following parameters can be set.
     
     describes the operation used for aggregation of the data, see
     :meth:`the SMPCOperation variable <FeatureCloud.app.engine.app.SMPCOperation>` 
-    for all options.
+    for all options. Please notice that the multiply option is still experimental.
 
   * **serialization**: 
    

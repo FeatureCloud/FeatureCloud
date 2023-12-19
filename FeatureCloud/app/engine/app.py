@@ -951,6 +951,8 @@ class AppState(abc.ABC):
             number of secrets to be created, if 0, the total number of participants will be used
         operation : SMPCOperation, default=SMPCOperation.ADD
             operation to perform for aggregation. Options are SMPCOperation.ADD and SMPCOperation.MULTIPLY
+            SMPCOperation.MULTIPLY is still experimental and may lead to values 
+            being 0 or integer overflows for many clients involved.
         serialization : SMPCSerialization, default=SMPCSerialization.JSON
             serialization to be used for the data, currently only the default Option (SMPCSerialization.JSON) is supported
         """
