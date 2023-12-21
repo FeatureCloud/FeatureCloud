@@ -213,7 +213,7 @@ class App:
             def run(self) -> Union[str, None]:
                 pass
 
-    def handle_setup(self, client_id, coordinator, clients, coordinatorID):
+    def handle_setup(self, client_id, coordinator, clients, coordinatorID=None):
         """ It will be called on startup and contains information about the
             execution context of this instance. And registers all of the states.
 
@@ -325,7 +325,7 @@ class App:
             status[key] = value
         return status
     
-    def handle_incoming(self, data, client, memo):
+    def handle_incoming(self, data, client, memo=None):
         """ When new data arrives, it appends it to the
             `data_incoming` attribute to be accessible for app states.
 
