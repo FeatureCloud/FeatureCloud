@@ -28,7 +28,7 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
     except OSError as error:
         pass
 
-    # cleanup unused controller containers
+    # cleanup unused controller containers and networks
     prune_controllers()
 
     # remove controller having the same name, if any
@@ -109,6 +109,17 @@ def prune_controllers():
         client.containers.prune(filters={"label": [CONTROLLER_LABEL]})
     except docker.errors.DockerException as e:
         raise FCException(e)
+
+    # Remove the network
+    try:
+        # Attempt to remove the network
+        client.networks.get("fc-controller-internal").remove()
+    except docker.errors.NotFound:
+        pass
+    except docker.errors.APIError as e:
+        print(f"An API error occurred: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 
 def logs(name: str, tail: bool, log_level: str):
