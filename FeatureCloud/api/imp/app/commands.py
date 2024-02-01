@@ -88,17 +88,17 @@ def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str 
         # it just takes too long. So we check it upfront:
         if not os.path.exists(os.path.join(path, 'Dockerfile')):
             raise FCException(f'Dockerfile not found in directory: {os.path.abspath(path)}')
-
-        for entry in client.api.build(path=path, tag=f"{image_name.lower()}:{tag}", rm=rm, decode=True):
-            # Examples of stream entries, 'message' indicates error:
-            # {'stream': 'Step 2/11 : RUN apt-get update && apt-get install -y supervisor nginx'}
-            # {'message': 'Cannot locate specified Dockerfile: Dockerfile'}
-            if 'message' in entry:
-                raise FCException(entry['message'])
-
-            yield entry
-    except docker.errors.DockerException as e:
-        raise FCException(e)
+        build_log_generator = client.images.build(path=path, tag=f"{image_name.lower()}:{tag}", rm=rm)
+        if type(build_log_generator) == tuple:
+            return build_log_generator[1]
+        else:
+            raise Exception("Unexpected response from the docker SDK")
+    except docker.errors.BuildError as e:
+        raise FCException("Error in building the image: " + str(e))
+    except docker.errors.APIError as e:
+        raise FCException("Error with the API: " + str(e))
+    except TypeError as e:
+        raise FCException("Error path to the Dockerfile not given: " + str(e))
 
 
 def download(name: str, tag: str = "latest"):

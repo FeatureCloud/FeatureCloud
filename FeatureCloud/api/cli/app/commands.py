@@ -73,11 +73,17 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
                 if value != value_lowercase:
                     click.echo(
                         "Uppercase letters are not allowed in image name. The new image name is: " + value_lowercase)
-        result = commands.build(**{k: v for k, v in arguments if v})
-        for _ in tqdm.tqdm(result, desc=f"Building {image_name.lower()}:{tag} ..."):
-            pass
+        click.echo(f'Building {image_name}:{tag} ...')
+        build_log_generator = commands.build(**{k: v for k, v in arguments if v})
+        # Iterate over the response
+        for output in build_log_generator:  
+            if 'stream' in output:
+                stream_output = output['stream'].strip()
+                if 'Step' in stream_output:
+                    click.echo(stream_output)
+        click.echo(f'Image {image_name}:{tag} built successfully')
     except FCException as e:
-        click.echo(f'Error: {e}')
+        click.echo(f'Error: {e}')      
 
 
 @app.command('download')
