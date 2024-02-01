@@ -723,7 +723,7 @@ class AppState(abc.ABC):
             # only increment for the coordinator to really avoid any p2p 
             # problems
             if (n == len(self._app.clients) and use_smpc==False) \
-                or (n == len(self._app.clients) - 1 and use_smpc==False) \
+                or ((n == len(self._app.clients) - 1 and use_smpc==False) and len(self._app.clients) > 2) \
                 or use_smpc == True:
                 # this is a gather/aggregate call, although in theory
                 # (n==1 and is_json=True) could also be an SMPC gather call,
