@@ -38,6 +38,8 @@ def ctrl_data_out():
 def ctrl_data_in():
     print(f'[CTRL] POST /data')
     if "memo" in request.query:
+        # The memo is URL-encoded, we compare later with the memo URL-encoded as well
+        # we have to keep the URl-encoding here
         memo = request.query["memo"]
     else:
         memo = None

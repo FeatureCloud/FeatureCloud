@@ -9,6 +9,7 @@ import pickle
 import sys
 import threading
 import traceback
+import urllib.parse
 
 from enum import Enum
 from time import sleep
@@ -622,6 +623,8 @@ class AppState(abc.ABC):
         if not memo:
             self._app.receive_counter += 1
             memo = f"GATHERROUND{self._app.receive_counter}"
+        # we need to use the urlencoded memo as this is what we reiceive
+        memo = urllib.parse.quote(memo)
         if use_smpc:
             return self.await_data(n=1, unwrap=True, is_json=True, memo=memo)  
               # Data is aggregated already
@@ -670,6 +673,8 @@ class AppState(abc.ABC):
         if not memo:
             self._app.receive_counter += 1
             memo = f"GATHERROUND{self._app.receive_counter}"
+        # we need to use the urlencoded memo as this is what we reiceive
+        memo = urllib.parse.quote(memo)
         return self.await_data(n, unwrap=False, is_json=is_json, use_dp=use_dp,
                                use_smpc=use_smpc, memo=memo)
 
@@ -738,6 +743,10 @@ class AppState(abc.ABC):
             self._app.log(
                 f"given memo cannot be translated to a string, ERROR: {e}", 
                 LogLevel.Error)
+
+        # we need to use the urlencoded memo as this is what we reiceive
+        if memo:
+            memo = urllib.parse.quote(memo)
 
         while True:
             num_data_pieces = 0
