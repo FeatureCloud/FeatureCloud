@@ -62,7 +62,13 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
     if blockchain_address:
         blockchain_command = f'--blockchain-address={blockchain_address}'
 
-    volumes = [f'{base_dir}/{data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock']
+    # set the correct host folder to be mounted
+    if os.path.isabs(data_dir):
+        host_data_dir = data_dir
+    else:
+        host_data_dir = os.path.join(base_dir, data_dir)
+
+    volumes = [f'{host_data_dir}:/{data_dir}', '/var/run/docker.sock:/var/run/docker.sock']
     if mount:
         volumes.append(f'{mount}:/mnt')
 
@@ -76,7 +82,7 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
             volumes=volumes,
             labels=[CONTROLLER_LABEL],
             device_requests=device_requests,
-            command=f"--host-root='{base_dir}/{data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command} {blockchain_command}"
+            command=f"--host-root='{host_data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command} {blockchain_command}"
         )
     except docker.errors.DockerException as e:
         raise FCException(e)

@@ -13,7 +13,7 @@ def help():
           https://arxiv.org/abs/2105.05734 """)
 
 
-def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval: str,
+def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval: int,
           download_results: str):
     if not controller.is_online(controller_host):
         raise ControllerOffline(controller_host)

@@ -13,7 +13,7 @@ def is_online(url: str = 'http://localhost:8000/'):
 
 
 def start_test(url: str, docker_image: str, directories: [], generic_directory: str, is_local_relay: bool,
-               query_interval: str or int, download_results: str):
+               query_interval: int, download_results: str):
     """
     Start a new test
     :param url:
