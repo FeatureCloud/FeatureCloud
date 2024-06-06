@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(name="FeatureCloud",
-                 version="0.0.31",
+                 version="0.0.32",
                  author="FeatureCloud",
                  author_email="mohammad.bakhtiari@uni-hamburg.de",
                  description="Secure Federated Learning Platform",
@@ -25,7 +25,7 @@ setuptools.setup(name="FeatureCloud",
                                                    ]
                                },
                  install_requires=['bottle', 'jsonpickle', 'joblib', 'numpy', 'pydot', 'pyyaml', 'flake8~=3.9.2',
-                                   'pycodestyle~=2.7.0', 'Click~=8.0.1', 'requests', 'urllib3~=1.26.6', 
-                                   'pandas>=2.0', 'pyinstaller', 'docker==5.0.3', 'gitpython', 'tqdm']
+                                   'pycodestyle~=2.7.0', 'Click~=8.0.1', 'requests', 'urllib3~=1.26.6',
+                                   'pandas>=2.0', 'pyinstaller', 'docker==7.1.0', 'gitpython', 'tqdm']
 
                  )
