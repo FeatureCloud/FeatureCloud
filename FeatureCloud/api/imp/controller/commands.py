@@ -77,7 +77,6 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
             controller_image,
             detach=True,
             name=cont_name,
-            platform='linux/amd64',
             ports={8000: port if port else DEFAULT_PORT},
             volumes=volumes,
             labels=[CONTROLLER_LABEL],
