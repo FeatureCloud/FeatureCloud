@@ -55,7 +55,7 @@ def controller() -> None:
     help="Path to config file inside container (defaults to config.yml).",
 )
 
-
+@click.pass_context
 def start(ctx: click.Context,
           name: str,
           port: int,
