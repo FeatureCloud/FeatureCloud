@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(name="FeatureCloud",
-                 version="0.1.0",
+                 version="0.1.1",
                  author="FeatureCloud",
                  author_email="mohammad.bakhtiari@uni-hamburg.de",
                  description="Secure Federated Learning Platform",
@@ -22,6 +22,8 @@ setuptools.setup(name="FeatureCloud",
                  python_requires=">=3.7",
                  entry_points={'console_scripts': ['FeatureCloud = FeatureCloud.api.cli.__main__:fc_cli',
                                                    'featurecloud = FeatureCloud.api.cli.__main__:fc_cli',
+                                                    'CVDLink = FeatureCloud.api.cli.__main__:cvdlink_cli',
+                                                    'cvdlink = FeatureCloud.api.cli.__main__:cvdlink_cli',
                                                    ]
                                },
                  install_requires=['bottle', 'jsonpickle', 'joblib', 'numpy', 'pydot', 'pyyaml', 'flake8~=3.9.2',

@@ -17,7 +17,22 @@ LOG_FETCH_INTERVAL = 3  # seconds
 LOG_LEVEL_CHOICES = ['debug', 'info', 'warn', 'error', 'fatal']
 
 
-def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: bool, mount: str, blockchain_address: str):
+def start(
+    name: str,
+    port: int,
+    data_dir: str,
+    controller_image: str,
+    with_gpu: bool,
+    mount: str,
+    blockchain_address: str,
+    profile: str = None,
+    global_endpoint: str = "",
+    registry: str = "",
+    relay_address: str = "",
+    poll_interval: int = 0,
+    query_interval: int = 0,
+    config_file: str = "",
+):
     client = get_docker_client()
 
     data_dir = data_dir if data_dir else DEFAULT_DATA_DIR
@@ -51,17 +66,6 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
     # forward slash works on all platforms
     base_dir = getcwd_fslash()
 
-    device_requests = None
-    gpu_command = ""
-    if with_gpu:
-        # '--gpus all' option
-        device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
-        gpu_command = '--has-gpu'
-
-    blockchain_command = ''
-    if blockchain_address:
-        blockchain_command = f'--blockchain-address={blockchain_address}'
-
     # set the correct host folder to be mounted
     if os.path.isabs(data_dir):
         host_data_dir = data_dir
@@ -72,6 +76,53 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
     if mount:
         volumes.append(f'{mount}:/mnt')
 
+    # ---------- profile-based defaults ----------
+    # For featurecloud: use config.yml defaults unless user overrides via CLI.
+    # For cvdlink: provide sensible defaults if not explicitly set.
+    if profile == "cvdlink":
+        if not global_endpoint:
+            global_endpoint = "https://fc.cvdlink-project.eu/api/"
+        if not registry:
+            registry = "fc.cvdlink-project.eu"
+        if not relay_address:
+            relay_address = "relay.fc.cvdlink-project.eu"
+
+
+    # ---------- build controller command ----------
+    # NB: we keep the original style with a single command string.
+    cmd_parts = [
+        f"--host-root='{host_data_dir}'",
+        f"--internal-root=/{data_dir}",
+        f"--controller-name={cont_name}",
+    ]
+    device_requests = None
+    if with_gpu:
+        device_requests = [docker.types.DeviceRequest(count=-1, capabilities=[['gpu']])]
+        cmd_parts.append("--has-gpu")
+
+    if blockchain_address:
+        cmd_parts.append(f"--blockchain-address={blockchain_address}")
+
+    if config_file:
+        cmd_parts.append(f"--config-file={config_file}")
+
+    if global_endpoint:
+        cmd_parts.append(f"--global-endpoint='{global_endpoint}'")
+
+    if registry:
+        cmd_parts.append(f"--registry={registry}")
+
+    if relay_address:
+        cmd_parts.append(f"--address={relay_address}")
+
+    if poll_interval > 0:
+        cmd_parts.append(f"--poll-interval={poll_interval}")
+
+    if query_interval > 0:
+        cmd_parts.append(f"--query-interval={query_interval}")
+
+    command = " ".join(cmd_parts)
+
     try:
         client.containers.run(
             controller_image,
@@ -81,7 +132,7 @@ def start(name: str, port: int, data_dir: str, controller_image: str, with_gpu: 
             volumes=volumes,
             labels=[CONTROLLER_LABEL],
             device_requests=device_requests,
-            command=f"--host-root='{host_data_dir}' --internal-root=/{data_dir} --controller-name={cont_name} {gpu_command} {blockchain_command}"
+            command=command,
         )
     except docker.errors.DockerException as e:
         raise FCException(e)

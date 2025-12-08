@@ -20,16 +20,90 @@ def controller() -> None:
 @click.option('--mount', help='Use this option when you want mount a folder that is available only to the '
                               'controller\'s protected environment, e.g. to upload input data for apps.', default='', required=False)
 @click.option('--blockchain-address', help='Address of application that connects to the blockchain system', default='', required=False)
-def start(name: str, port: int, data_dir: str, controller_image, gpu: bool, mount: str, blockchain_address: str) -> None:
+
+# NEW – specific overrides
+@click.option(
+    "--global-endpoint",
+    default="",
+    help="Override manager.globalEndpoint (default taken from config.yml).",
+)
+@click.option(
+    "--registry",
+    default="",
+    help="Override manager.registry (default taken from config.yml).",
+)
+@click.option(
+    "--relay-address",
+    default="",
+    help="Override relay.address (default taken from config.yml).",
+)
+@click.option(
+    "--poll-interval",
+    type=int,
+    default=0,
+    help="Override workflow.pollInterval (default taken from config.yml).",
+)
+@click.option(
+    "--query-interval",
+    type=int,
+    default=0,
+    help="Override workflow.queryInterval (default taken from config.yml).",
+)
+@click.option(
+    "--config-file",
+    default="",
+    help="Path to config file inside container (defaults to config.yml).",
+)
+
+
+def start(ctx: click.Context,
+          name: str,
+          port: int,
+          data_dir: str,
+          controller_image: str,
+          gpu: bool,
+          mount: str,
+          blockchain_address: str,
+          global_endpoint: str,
+          registry: str,
+          relay_address: str,
+          poll_interval: int,
+          query_interval: int,
+          config_file: str,
+          ) -> None:
     """Start a controller instance.
 
     NAME is the controller instance name
 
     Example: featurecloud controller start my-fc-controller --gpu=True
     """
+    profile = "featurecloud"
+    if ctx is not None and isinstance(ctx.obj, dict):
+        profile = ctx.obj.get("profile", "featurecloud")
     try:
-        commands.start(name, port, data_dir, controller_image, gpu, mount, blockchain_address)
-        click.echo(f'Started controller: {name}')
+        commands.start(
+            name=name,
+            port=port,
+            data_dir=data_dir,
+            controller_image=controller_image,
+            with_gpu=gpu,
+            mount=mount,
+            blockchain_address=blockchain_address,
+            profile=profile,
+            global_endpoint=global_endpoint,
+            registry=registry,
+            relay_address=relay_address,
+            poll_interval=poll_interval,
+            query_interval=query_interval,
+            config_file=config_file,
+        )
+        click.echo(
+            click.style(
+                f"Started controller '{name}' using profile '{profile}'",
+                fg="green",
+                bold=True,
+            )
+        )
     except FCException as e:
         if str(e).find("port is already allocated") > -1:
             click.echo(f'Controller could not be started. Port {port} is already allocated.')
