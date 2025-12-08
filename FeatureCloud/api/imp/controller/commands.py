@@ -36,7 +36,11 @@ def start(
     client = get_docker_client()
 
     data_dir = data_dir if data_dir else DEFAULT_DATA_DIR
-    controller_image = controller_image if controller_image else DEFAULT_CONTROLLER_IMAGE
+    if not controller_image:
+        if profile == "cvdlink":
+            controller_image = "fc.cvdlink-project.eu/controller:latest"
+        else:
+            controller_image = DEFAULT_CONTROLLER_IMAGE
     # Create data dir if needed
     try:
         os.mkdir(data_dir)
