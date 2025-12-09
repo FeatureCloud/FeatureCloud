@@ -108,10 +108,10 @@ def start(
         cmd_parts.append(f"--blockchain-address={blockchain_address}")
 
     if config_file:
-        cmd_parts.append(f"--config-file={config_file}")
+        cmd_parts.append(f"--configfile={config_file}")
 
     if global_endpoint:
-        cmd_parts.append(f"--global-endpoint='{global_endpoint}'")
+        cmd_parts.append(f"--endpoint='{global_endpoint}'")
 
     if registry:
         cmd_parts.append(f"--registry={registry}")
