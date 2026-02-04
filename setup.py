@@ -3,9 +3,9 @@ import setuptools
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-setuptools.setup(name="FeatureCloud",
+setuptools.setup(name="cvdlink",
                  version="0.1.1",
-                 author="FeatureCloud",
+                 author="CoSyBio Group, University of Hamburg",
                  author_email="mohammad.bakhtiari@uni-hamburg.de",
                  description="Secure Federated Learning Platform",
                  long_description=long_description,
