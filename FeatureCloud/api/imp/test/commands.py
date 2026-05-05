@@ -1,6 +1,8 @@
 from FeatureCloud.api.imp.test import helper
 from FeatureCloud.api.imp.test.api import controller
 from FeatureCloud.api.imp.exceptions import ControllerOffline, FCException
+from FeatureCloud.api.imp.app.commands import fc_repo_name
+import os
 
 
 def help():
@@ -14,12 +16,15 @@ def help():
 
 
 def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval: int,
-          download_results: str):
+          download_results: str, profile: str = None):
     if not controller.is_online(controller_host):
         raise ControllerOffline(controller_host)
 
+    prof = profile or os.environ.get("FC_CLI_PROFILE")
+    app_image_resolved = fc_repo_name(app_image.strip(), prof)
+
     success, result = controller.start_test(controller_host,
-                                            app_image,
+                                            app_image_resolved,
                                             filter(None, client_dirs.split(',')),
                                             generic_dir,
                                             channel == 'local',

@@ -11,7 +11,15 @@ from FeatureCloud.api.imp.util import getcwd_fslash, get_docker_client, remove_d
 import pydot
 import importlib
 
+# Default Docker registry repository prefixes (image must be pushed with matching `docker login` host).
 FC_REPO_PREFIX = "featurecloud.ai/"
+CVDLINK_REPO_PREFIX = "fc.cvdlink-project.eu/"
+
+
+def registry_repo_prefix(profile: str = None) -> str:
+    if profile == "cvdlink":
+        return CVDLINK_REPO_PREFIX
+    return FC_REPO_PREFIX
 
 
 def create_link(template_name: str) -> str:
@@ -101,7 +109,7 @@ def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str 
         raise FCException("Error path to the Dockerfile not given: " + str(e))
 
 
-def download(name: str, tag: str = "latest"):
+def download(name: str, tag: str = "latest", profile: str = None):
     """ Download a given docker image from FeatureCloud.ai docker repo.
 
     Parameters
@@ -118,7 +126,7 @@ def download(name: str, tag: str = "latest"):
     -------
          FeatureCloud.api.imp.exceptions.FCException
     """
-    fc_name = fc_repo_name(name)
+    fc_name = fc_repo_name(name, profile)
     client = get_docker_client()
     try:
         for entry in client.api.pull(repository=fc_name, tag=tag, stream=True, decode=True):
@@ -130,7 +138,7 @@ def download(name: str, tag: str = "latest"):
         raise FCException(e)
 
 
-def publish(name: str, tag: str = "latest"):
+def publish(name: str, tag: str = "latest", profile: str = None):
     """ Push a given app into FeatureCloud.ai docker repo.
 
     Parameters
@@ -147,7 +155,7 @@ def publish(name: str, tag: str = "latest"):
     -------
          FeatureCloud.api.imp.exceptions.FCException
     """
-    fc_name = fc_repo_name(name)
+    fc_name = fc_repo_name(name, profile)
     client = get_docker_client()
 
     try:
@@ -170,7 +178,7 @@ def publish(name: str, tag: str = "latest"):
         raise FCException(e)
 
 
-def remove(name: str, tag: str = "latest"):
+def remove(name: str, tag: str = "latest", profile: str = None):
     """ Delete docker image from local hard drive.
 
     Parameters
@@ -189,17 +197,17 @@ def remove(name: str, tag: str = "latest"):
 
     if tag == 'all':
         # search also for local images containing the FC repository name
-        to_find = fc_repo_name(name)
+        to_find = fc_repo_name(name, profile)
         removed = removed + remove_images(client, to_find)
 
     return removed
 
 
-def fc_repo_name(name: str) -> str:
-    if not name.startswith(FC_REPO_PREFIX):
-        return f'{FC_REPO_PREFIX}{name}'
-
-    return name
+def fc_repo_name(name: str, profile: str = None) -> str:
+    """Resolve short app name to full registry repository (host/path, no tag)."""
+    if name.startswith(FC_REPO_PREFIX) or name.startswith(CVDLINK_REPO_PREFIX):
+        return name
+    return f'{registry_repo_prefix(profile)}{name}'
 
 
 def remove_images(client: DockerClient, to_find: str):

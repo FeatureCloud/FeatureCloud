@@ -54,6 +54,12 @@ def controller() -> None:
     default="",
     help="Path to config file inside container (defaults to config.yml).",
 )
+@click.option(
+    "--no-pull",
+    is_flag=True,
+    default=False,
+    help="Do not run docker pull; use the controller image already present locally.",
+)
 
 @click.pass_context
 def start(ctx: click.Context,
@@ -70,6 +76,7 @@ def start(ctx: click.Context,
           poll_interval: int,
           query_interval: int,
           config_file: str,
+          no_pull: bool,
           ) -> None:
     """Start a controller instance.
 
@@ -96,6 +103,7 @@ def start(ctx: click.Context,
             poll_interval=poll_interval,
             query_interval=query_interval,
             config_file=config_file,
+            no_pull=no_pull,
         )
         click.echo(
             click.style(

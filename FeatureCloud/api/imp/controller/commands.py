@@ -32,6 +32,7 @@ def start(
     poll_interval: int = 0,
     query_interval: int = 0,
     config_file: str = "",
+    no_pull: bool = False,
 ):
     client = get_docker_client()
 
@@ -58,13 +59,14 @@ def start(
     except docker.errors.DockerException as e:
         raise FCException(e)
 
-    # pull controller and display progress
-    try:
-        pull_proc = client.api.pull(repository=controller_image, stream=True)
-        for p in tqdm.tqdm(pull_proc, desc='Downloading...'):
-            pass
-    except docker.errors.DockerException as e:
-        raise FCException(e)
+    # pull controller and display progress (optional; skip to keep a local-only tag)
+    if not no_pull:
+        try:
+            pull_proc = client.api.pull(repository=controller_image, stream=True)
+            for p in tqdm.tqdm(pull_proc, desc='Downloading...'):
+                pass
+        except docker.errors.DockerException as e:
+            raise FCException(e)
 
     cont_name = name if name else DEFAULT_CONTROLLER_NAME
     # forward slash works on all platforms

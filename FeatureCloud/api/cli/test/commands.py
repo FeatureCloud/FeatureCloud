@@ -36,7 +36,7 @@ def help():
                    'instances (e.g. featurecloud test start --generic-dir=.).',
               required=True)
 @click.option('--app-image', default='test_app',
-              help='The repository url of the app image (e.g. featurecloud test start --app-image=featurecloud.ai/test_app).',
+              help='App image repository (short name or full host/path). With cvdlink CLI, short names use fc.cvdlink-project.eu/ (e.g. cvdlink test start --app-image=my_app).',
               required=True)
 @click.option('--channel', default='local',
               help='The communication channel to be used. Possible values: "local" or "internet" (e.g. featurecloud test start --channel=local).')
@@ -48,12 +48,16 @@ def help():
 @click.option('--print-logs',
               help='When selected, it will monitor the started test by printing the current status every 3s. When the test is finished (or has an error), the relevant logs will be output. Canceling the command after the test was started will NOT stop the test.',
               is_flag=True)
-def start(controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str, query_interval: str,
-          download_results: str, print_logs: bool):
+@click.pass_context
+def start(ctx: click.Context, controller_host: str, client_dirs: str, generic_dir: str, app_image: str, channel: str,
+          query_interval: str, download_results: str, print_logs: bool):
     """Starts testbed run with the specified parameters"""
+    profile = "featurecloud"
+    if ctx.obj:
+        profile = ctx.obj.get("profile", "featurecloud")
     try:
         test_id = commands.start(controller_host, client_dirs, generic_dir, app_image, channel, query_interval,
-                                download_results)
+                                download_results, profile)
         click.echo(f"Test id={test_id} started")
     except requests.exceptions.InvalidSchema:
         click.echo(f'No connection adapters were found for {controller_host}')

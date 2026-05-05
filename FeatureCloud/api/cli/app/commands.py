@@ -89,7 +89,8 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
 @app.command('download')
 @click.argument('name', type=str, default=None, nargs=1, required=True)
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
-def download(name: str, tag: str):
+@click.pass_context
+def download(ctx: click.Context, name: str, tag: str):
     """
     Download an image from FeatureCloud repository
 
@@ -99,8 +100,11 @@ def download(name: str, tag: str):
 
     Example: featurecloud app download my_app:latest
     """
+    profile = "featurecloud"
+    if ctx.obj:
+        profile = ctx.obj.get("profile", "featurecloud")
     try:
-        result = commands.download(**{k: v for k, v in locals().items() if v})
+        result = commands.download(name, tag, profile)
         for _ in tqdm.tqdm(result, desc=f"Downloading {name}:{tag} ..."):
             pass
     except FCException as e:
@@ -110,7 +114,8 @@ def download(name: str, tag: str):
 @app.command('publish')
 @click.argument('name', type=str, default=None, nargs=1, required=True)
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
-def publish(name: str, tag: str):
+@click.pass_context
+def publish(ctx: click.Context, name: str, tag: str):
     """
     Publish an app in FeatureCloud repository
 
@@ -123,21 +128,30 @@ def publish(name: str, tag: str):
     The app should be created and the image name set in the AI Store prior publishing
 
     """
+    profile = "featurecloud"
+    if ctx.obj:
+        profile = ctx.obj.get("profile", "featurecloud")
+    registry_host = (
+        "fc.cvdlink-project.eu" if profile == "cvdlink" else "featurecloud.ai"
+    )
     try:
-        result = commands.publish(**{k: v for k, v in locals().items() if v})
+        result = commands.publish(name, tag, profile)
         for _ in tqdm.tqdm(result, desc=f"Uploading {name}:{tag} ..."):
             pass
     except FCException as e:
         if str(e).find("authentication required") > -1:
             click.echo(
-                f'Image cannot be pushed. A docker login is necessary to featurecloud.ai with user credentials or the app is inexistent in Featurecloud AI Store. In this case please create an app in AI Store with the specified image name.')
+                f"Image cannot be pushed. Run `docker login {registry_host}` with credentials that can push "
+                f"this repository, or ensure the app exists in the platform app store with image name `{name}`."
+            )
         click.echo(f'Error: {e}')
 
 
 @app.command('remove')
 @click.argument('name', type=str, default=None, nargs=1, required=True)
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
-def remove(name: str, tag: str):
+@click.pass_context
+def remove(ctx: click.Context, name: str, tag: str):
     """
     Delete app image(s) from the local repository. This command will not delete the app from FeatureCloud AI Store.
 
@@ -147,8 +161,11 @@ def remove(name: str, tag: str):
 
     Example: featurecloud app remove my-app all
     """
+    profile = "featurecloud"
+    if ctx.obj:
+        profile = ctx.obj.get("profile", "featurecloud")
     try:
-        result = commands.remove(**{k: v for k, v in locals().items() if v})
+        result = commands.remove(name, tag, profile)
         if len(result) == 0:
             click.echo(f'No image found')
         else:

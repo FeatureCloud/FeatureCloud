@@ -1,3 +1,4 @@
+import os
 import os.path
 from os import listdir
 from pathlib import Path
@@ -7,6 +8,8 @@ from FeatureCloud.workflow.controller import Controller
 from functools import partial
 import shutil
 from distutils.dir_util import copy_tree
+
+from FeatureCloud.api.imp.app.commands import fc_repo_name
 
 
 class TestApp(Controller):
@@ -43,12 +46,10 @@ class TestApp(Controller):
         copy_results(ctrl_data_path, dest_generic, dest_clients, default_res_name):
 
     """
-    def __init__(self, app_id, ctrl_data_path, ctrl_test_path, n_clients, app_image, **kwargs):
+    def __init__(self, app_id, ctrl_data_path, ctrl_test_path, n_clients, app_image, profile=None, **kwargs):
         super().__init__(**kwargs)
-        if app_image.strip().startswith("featurecloud.ai/"):
-            self.app_image = app_image.strip()
-        else:
-            self.app_image = f"featurecloud.ai/{app_image.strip()}"
+        prof = profile or os.environ.get("FC_CLI_PROFILE")
+        self.app_image = fc_repo_name(app_image.strip(), prof)
         self.test_id = None
         self.n_clients = n_clients
         self.results_ready = False
@@ -62,7 +63,7 @@ class TestApp(Controller):
         self.start = partial(self.start,
                              client_dirs=self.clients_relative_path,
                              generic_dir=self.generic_dir,
-                             app_image=app_image,
+                             app_image=self.app_image,
                              download_results=self.results_relative_path)
         self.stop = partial(self.stop, self.test_id)
 
