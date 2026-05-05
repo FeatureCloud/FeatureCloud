@@ -1,135 +1,133 @@
 
-# CVDLink (FeatureCloud Extension)
+# CVDLink (FeatureCloud extension)
 
 ## Overview
 
-**CVDLink** is a domain-specific extension of the **FeatureCloud** Python package, customized and deployed for the **CVDLink project** available on https://fc.cdvlink-project.eu   
-It builds on the core FeatureCloud platform to support **privacy-preserving federated learning and data analysis**, while providing **CVDLink-specific defaults, endpoints, and infrastructure integrations**.
+**CVDLink** is a domain-specific extension of the **FeatureCloud** Python package, tailored for the **CVDLink** project and deployment at [https://fc.cvdlink-project.eu](https://fc.cvdlink-project.eu). It builds on the same engine to support **privacy-preserving federated learning and data analysis**, with **CVDLink-oriented defaults** for controller images, global API endpoints, and container registries.
 
-CVDLink targets federated collaborations in cardiovascular research and related biomedical domains, enabling partners to participate in secure, distributed workflows without sharing raw data.
+CVDLink targets federated collaborations in cardiovascular research and related biomedical domains, enabling partners to run distributed workflows without sharing raw data.
 
-> **Important:**  
-> CVDLink is **not a replacement or independent fork** of FeatureCloud.  
-> It is an **extension and specialization** built on top of the FeatureCloud engine.
+> **Important:** CVDLink is **not** a standalone replacement for FeatureCloud. It is a **specialization** of the same codebase and tooling, distributed as the **`cvdlink`** pip package with CVDLink-first defaults.
 
 ---
 
 ## Relationship to FeatureCloud
 
-CVDLink is based on the FeatureCloud platform and reuses:
+This package reuses the FeatureCloud controller runtime, app model, CLI layout, tests, and workflow tooling. It adds:
 
-- FeatureCloud controller and execution engine
-- FeatureCloud app and state model
-- FeatureCloud CLI command structure
-- FeatureCloud testing and workflow system
+- **`cvdlink` / `CVDLink` CLI entry points** that default to the **CVDLink** profile
+- **`featurecloud` / `FeatureCloud` entry points** that default to the **FeatureCloud** profile (same commands, different defaults)
+- **Profile-aware Docker image names** for app **publish**, **download**, **remove**, and **test** flows (registry host prefix chosen from the active profile)
+- Optional **`--no-pull`** on **controller start** for air-gapped or pre-loaded images
 
-CVDLink extends FeatureCloud by providing:
+For general FeatureCloud concepts and app development, see [featurecloud.ai](https://featurecloud.ai) and the [FeatureCloud repository](https://github.com/FeatureCloud/FeatureCloud).
 
-- A **CVDLink-specific CLI entry point**
-- **Profile-based configuration** for CVDLink deployments
-- **CVDLink-specific defaults** for:
-  - Controller images
-  - Global API endpoints
-  - Docker registries
-  - Relay servers
-- Seamless switching between FeatureCloud and CVDLink environments using the same codebase
-
-For general FeatureCloud concepts, architecture, and app development, please refer to:
-- https://featurecloud.ai
-- [FeatureCloud GitHub repositor](https://github.com/FeatureCloud/FeatureCloud/tree/cvdlink) 
-- Matschinske, J., Späth, J., Bakhtiari, M., Probul, N., Kazemi Majdabadi, M. M., Nasirigerdeh, R., ... & Baumbach, J. (2023). The FeatureCloud platform for federated learning in biomedicine: unified approach. Journal of Medical Internet Research, 25, e42621.
+Reference: Matschinske, J., Späth, J., Bakhtiari, M., Probul, N., Kazemi Majdabadi, M. M., Nasirigerdeh, R., ... & Baumbach, J. (2023). The FeatureCloud platform for federated learning in biomedicine: unified approach. *Journal of Medical Internet Research*, 25, e42621.
 
 ---
 
 ## Installation
 
-Install the CVDLink Python package via pip:
-
 ```bash
 pip install cvdlink
 ```
 
+The distribution name on PyPI is **`cvdlink`**; import paths remain under **`FeatureCloud`**.
 
-## CLI Overview
+---
 
-CVDLink provides a **FeatureCloud-compatible command-line interface** with a dedicated entry point:
+## CLI entry points and profiles
+
+| Command | Default profile | Typical use |
+|--------|-----------------|-------------|
+| `cvdlink` / `CVDLink` | `cvdlink` | CVDLink deployments (`fc.cvdlink-project.eu`, …) Same flags as FeatureCloud. |
+| `featurecloud` / `FeatureCloud` | `featurecloud` | Upstream FeatureCloud defaults (`featurecloud.ai`, …) |
+
+The active profile affects **default registry prefixes** for app images:
+
+- **FeatureCloud:** `featurecloud.ai/…`
+- **CVDLink:** `fc.cvdlink-project.eu/…`
+
+You can still override the registry with **`--registry`** where the command supports it. Short image names are completed using the prefix that matches the current profile (so you do not have to type the full registry path when it matches your environment).
+
+### Environment variable
+
+For **tests** and **workflow** code that resolves app images outside the main CLI, you can set:
 
 ```bash
-cvdlink --help
+export FC_CLI_PROFILE=cvdlink   # or featurecloud
 ```
 
-The CLI mirrors the FeatureCloud command structure, ensuring that existing FeatureCloud users can work with CVDLink without a learning curve.
+If unset, the workflow layer falls back to sensible defaults for the context in which it runs.
 
-Internally, the CLI uses a profile-based configuration, allowing the same codebase to support both FeatureCloud and CVDLink deployments.
+---
 
-### Controller Commands
+## Controller commands
 
-The controller command group is used to start, manage, and inspect CVDLink controller instances.
+Start, stop, inspect, and tail controller instances.
 
-##### Start a Controller
+### Start a controller
+
 ```bash
 cvdlink controller start [NAME] [OPTIONS]
 ```
 
-By default, this command:
+By default, CVDLink uses profile **`cvdlink`**: CVDLink-oriented controller images and config defaults apply unless you override them.
 
-* Uses CVDLink-specific controller Docker images
-* Connects to CVDLink global API endpoints
-* Uses the CVDLink relay infrastructure
-* Applies CVDLink defaults defined in the configuration profile
+#### Common options
 
-#### Common Options
-
-* --port: Port number for the controller (default: 8000)
-* --data-dir: Directory used to store controller data
-* --controller-image: Override the controller Docker image
-* --global-endpoint: Override the global API endpoint
-* --registry: Override the Docker registry
-* --relay-address: Override the relay server address
-* --poll-interval: Override workflow poll interval
-* --query-interval: Override workflow query interval
-* --config-file: Path to a custom configuration file inside the container
+- **`--port`** — Controller port (default: `8000`)
+- **`--data-dir`** — Data directory for the controller
+- **`--controller-image`** — Full image reference override
+- **`--global-endpoint`**, **`--registry`**, **`--relay-address`** — Override baked config
+- **`--poll-interval`**, **`--query-interval`** — Workflow timing overrides
+- **`--config-file`** — Config file path inside the container
+- **`--no-pull`** — Skip **`docker pull`**; use the controller image already present locally (offline mirrors, custom tags, or CI)
 
 Example:
+
 ```bash
 cvdlink controller start --data-dir ./data
+cvdlink controller start --no-pull --controller-image fc.cvdlink-project.eu/controller:latest
 ```
 
+### Other controller commands
 
-Other Controller Commands
+- `controller status`, `logs`, `tail`, `ls`, `stop`
 
-* cvdlink controller status – Display controller status
-* cvdlink controller logs – Show controller logs
-* cvdlink controller tail – Follow controller logs
-* cvdlink controller ls – List running controllers
-* cvdlink controller stop – Stop a controller instance
+---
 
-#### App Commands
+## App commands
 
-The app command group is used to create, build, manage, and publish federated apps.
+Create, build, publish, pull, and remove federated app images.
 
-##### Create a New App
+### Examples
+
 ```bash
-cvdlink app new --template-name <TEMPLATE_URL>
-```
-
-Creates a new federated app based on a FeatureCloud-compatible template.
-
-Build an App Image
-```bash
+cvdlink app new --template-name app-blank
 cvdlink app build --path <APP_PATH> --image-name <NAME> --tag <TAG>
-```
-
-Publish an App
-```bash
 cvdlink app publish --name <NAME> --tag <TAG>
 ```
 
-Pushes the app image to the configured Docker registry. The image name should include fc.cvdlink-project.eu/ as the registry prefix which by default, this uses the CVDLink registry, unless overridden.
+**Publish / download / remove** use the **registry prefix for the active CLI profile** unless you supply a fully qualified image name. Log in to the registry host you use (`docker login fc.cvdlink-project.eu` for CVDLink).
 
-Additional App Commands:
+Other subcommands include **`download`**, **`remove`**, **`plot-states`**, matching FeatureCloud semantics under the chosen profile.
 
-* download – Download an app image
-* remove – Remove a local app image
-* plot-states – Visualize app states and transitions
-* All app commands follow the same semantics as FeatureCloud but operate within the CVDLink ecosystem by default.
+---
+
+## Tests and workflow
+
+**`cvdlink test`** (and **`featurecloud test`**) use the same test harness; image names for **`test start`** respect the active profile (and **`FC_CLI_PROFILE`** when workflow code runs in isolation). Use this when validating apps against the registry naming you deploy with.
+
+---
+
+## Branch purpose (**`cvdlink`**)
+
+The **`cvdlink`** branch exists to ship a **single package** that:
+
+1. Keeps **feature parity** with the FeatureCloud CLI and libraries.
+2. Makes **CVDLink** the default when users install **`cvdlink`** and run **`cvdlink …`**.
+3. Avoids **blind `docker pull`** when operators choose **`--no-pull`**.
+4. Keeps **registry-qualified image names** consistent with **CVDLink** vs **FeatureCloud** infrastructure.
+
+Upstream FeatureCloud behavior remains available via the **`featurecloud`** entry points in the same installation.
