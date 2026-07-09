@@ -50,7 +50,8 @@ def new(name: click.Path, directory: click.Path, template_name: str):
 @click.argument('image_name', type=str, default='', required=False)
 @click.argument('tag', type=str, default="latest", nargs=1, required=False)
 @click.argument('rm', type=bool, default=True, nargs=1, required=False)
-def build(path: click.Path, image_name: str, tag: str, rm: bool):
+@click.pass_context
+def build(ctx: click.Context, path: click.Path, image_name: str, tag: str, rm: bool):
     """
 
     Build app
@@ -65,6 +66,9 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
 
     Example: featurecloud app build ./my-new-app my-new-app first_version True
     """
+    profile = "featurecloud"
+    if ctx.obj:
+        profile = ctx.obj.get("profile", "featurecloud")
     try:
         arguments = locals().items()
         for key, value in arguments:
@@ -74,7 +78,10 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
                     click.echo(
                         "Uppercase letters are not allowed in image name. The new image name is: " + value_lowercase)
         click.echo(f'Building {image_name}:{tag} ...')
-        build_log_generator = commands.build(**{k: v for k, v in arguments if v})
+        build_log_generator = commands.build(
+            **{k: v for k, v in arguments if v and k not in ('ctx', 'profile')},
+            profile=profile,
+        )
         # Iterate over the response
         for output in build_log_generator:  
             if 'stream' in output:
@@ -82,6 +89,10 @@ def build(path: click.Path, image_name: str, tag: str, rm: bool):
                 if 'Step' in stream_output:
                     click.echo(stream_output)
         click.echo(f'Image {image_name}:{tag} built successfully')
+        registry_repo = f"{commands.fc_repo_name(image_name.lower(), profile)}:{tag}"
+        local_repo = f"{image_name.lower()}:{tag}"
+        if registry_repo != local_repo:
+            click.echo(f'Also tagged as {registry_repo}')
     except FCException as e:
         click.echo(f'Error: {e}')      
 

@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(name="cvdlink",
-                 version="0.1.4",
+                 version="0.1.5",
                  author="CoSyBio Group, University of Hamburg",
                  author_email="mohammad.bakhtiari@uni-hamburg.de",
                  description="Secure Federated Learning Platform",

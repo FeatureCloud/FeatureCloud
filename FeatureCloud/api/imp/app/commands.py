@@ -66,7 +66,7 @@ def new(name: str, directory: str = '.', template_name: str = 'app-blank') -> st
     return app_path
 
 
-def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str = True):
+def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str = True, profile: str = None):
     """ Build app image.
 
     Parameters
@@ -79,6 +79,8 @@ def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str 
         versioning tag
     rm: bool
         if True, remove intermediate containers
+    profile: str
+        CLI profile used to add a registry-qualified alias tag (e.g. fc.cvdlink-project.eu/my_app:latest)
     Returns
     -------
     lines
@@ -96,9 +98,15 @@ def build(path: str = ".", image_name: str = None, tag: str = "latest", rm: str 
         # it just takes too long. So we check it upfront:
         if not os.path.exists(os.path.join(path, 'Dockerfile')):
             raise FCException(f'Dockerfile not found in directory: {os.path.abspath(path)}')
-        build_log_generator = client.images.build(path=path, tag=f"{image_name.lower()}:{tag}", rm=rm)
-        if type(build_log_generator) == tuple:
-            return build_log_generator[1]
+        image_name_lower = image_name.lower()
+        local_repo = f"{image_name_lower}:{tag}"
+        build_result = client.images.build(path=path, tag=local_repo, rm=rm)
+        if type(build_result) == tuple:
+            built_image, log_generator = build_result
+            registry_repo = f"{fc_repo_name(image_name_lower, profile)}:{tag}"
+            if registry_repo != local_repo:
+                built_image.tag(registry_repo)
+            return log_generator
         else:
             raise Exception("Unexpected response from the docker SDK")
     except docker.errors.BuildError as e:

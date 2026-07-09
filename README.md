@@ -17,7 +17,7 @@ This package reuses the FeatureCloud controller runtime, app model, CLI layout, 
 
 - **`cvdlink` / `CVDLink` CLI entry points** that default to the **CVDLink** profile
 - **`featurecloud` / `FeatureCloud` entry points** that default to the **FeatureCloud** profile (same commands, different defaults)
-- **Profile-aware Docker image names** for app **publish**, **download**, **remove**, and **test** flows (registry host prefix chosen from the active profile)
+- **Profile-aware Docker image names** for app **build**, **publish**, **download**, **remove**, and **test** flows (registry host prefix chosen from the active profile)
 - Optional **`--no-pull`** on **controller start** for air-gapped or pre-loaded images
 
 For general FeatureCloud concepts and app development, see [featurecloud.ai](https://featurecloud.ai) and the [FeatureCloud repository](https://github.com/FeatureCloud/FeatureCloud).
@@ -109,6 +109,8 @@ cvdlink app build --path <APP_PATH> --image-name <NAME> --tag <TAG>
 cvdlink app publish --name <NAME> --tag <TAG>
 ```
 
+**`app build`** tags the image locally as `<name>:<tag>` and, for the active CLI profile, also as `<registry>/<name>:<tag>` (e.g. `fc.cvdlink-project.eu/my_app:latest` under `cvdlink`). This aligns **`build`** with **`test start`**, **`publish`**, **`download`**, and **`remove`**, which already use registry-qualified names.
+
 **Publish / download / remove** use the **registry prefix for the active CLI profile** unless you supply a fully qualified image name. Log in to the registry host you use (`docker login fc.cvdlink-project.eu` for CVDLink).
 
 Other subcommands include **`download`**, **`remove`**, **`plot-states`**, matching FeatureCloud semantics under the chosen profile.
@@ -118,6 +120,60 @@ Other subcommands include **`download`**, **`remove`**, **`plot-states`**, match
 ## Tests and workflow
 
 **`cvdlink test`** (and **`featurecloud test`**) use the same test harness; image names for **`test start`** respect the active profile (and **`FC_CLI_PROFILE`** when workflow code runs in isolation). Use this when validating apps against the registry naming you deploy with.
+
+### Local testbed example
+
+```bash
+cvdlink app build <APP_PATH> my_app latest True
+cvdlink test start --app-image my_app --client-dirs './01,./02'
+```
+
+After **`app build`**, you can use the short image name with **`test start`**; the registry alias tag is created automatically.
+
+---
+
+## Running apps on the CVDLink platform
+
+For running apps via [https://fc.cvdlink-project.eu/projects](https://fc.cvdlink-project.eu/projects) (frontend project workflow), use a registry image and point the controller at your input data:
+
+```bash
+git clone https://github.com/Freddsle/fc_sending_examples.git
+cd fc_sending_examples
+pip install cvdlink
+cvdlink controller start --data-dir ./data
+cvdlink app download fc.cvdlink-project.eu/fc_sending_examples
+```
+
+Then create a project on the platform, add the app, select input data via the frontend, and run.
+
+### Platform project vs local testbed
+
+| Workflow | Image source | How data is supplied |
+|----------|--------------|----------------------|
+| **Platform project** (frontend) | `app download` with registry-qualified name | Select client files in the CVDLink web UI |
+| **Local testbed** (`test start`) | `app build` or `app download` | `--client-dirs` / `--generic-dir` CLI flags |
+
+### `--data-dir` vs `--mount`
+
+- **`--data-dir ./data`** (recommended): mounts the host `data/` folder as the controller's data root. Client input folders (e.g. `data/01`, `data/02`) should live here so the platform can access them when you select files in the GUI.
+- **`--mount <path>`**: mounts an *additional* host path at `/mnt` inside the container, intended for protected uploads. It does **not** replace `--data-dir`. If input data is only reachable via `--mount` and not under the controller data root, file selection in the frontend may fail or return an empty `"files": []` payload.
+
+```bash
+cvdlink controller start --data-dir ./data
+# optional extra mount (data must still be visible to the controller):
+cvdlink controller start --data-dir ./data --mount /absolute/path/to/extra-data
+```
+
+### Browser recommendation
+
+For selecting input data and running apps in the CVDLink web UI, **Firefox** is the recommended browser. If file selection or upload does not behave as expected in another browser (e.g. Chrome), try Firefox before changing your controller or data setup.
+
+### If file selection returns empty `"files": []`
+
+1. Use `--data-dir` pointing at the folder that contains client subdirectories (e.g. `./data` with `01/`, `02/` inside).
+2. Try the platform GUI in Firefox.
+3. Use `app download` with the registry-qualified image name for platform projects.
+4. If problems persist, verify the controller is running and data paths are visible (`cvdlink controller status`).
 
 ---
 
